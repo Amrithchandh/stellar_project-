@@ -9,7 +9,10 @@ import ConnectBank from './components/ConnectBank';
 import Scanner from './components/Scanner'; // Imported Scanner
 import { useBalance } from './hooks/useBalance';
 import { logBehavioralEvent } from './utils/logger';
-import { Send, History, User, Settings, CreditCard, Search, Sun, Moon, QrCode, Building2, Landmark, ShieldCheck } from 'lucide-react';
+import {
+  Plus, Search, QrCode, User, Send, Building2, ChevronRight, History,
+  Settings, Moon, Sun, Smartphone, AtSign, ArrowRightLeft, Receipt, Zap, CreditCard
+} from 'lucide-react';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -49,25 +52,25 @@ const App = () => {
     logBehavioralEvent('login_complete', { group: studyGroup });
   };
 
-  const handleInitiatePay = (amount, walletId, recipient, note) => {
+  const handleInitiatePay = (amount, walletId, recipient, note, needType) => {
     if (recipient === user.upiId || recipient === user.email) {
       alert("You cannot transfer money to yourself!");
       return;
     }
-    setPendingPayment({ amount, walletId, recipient, note });
+    setPendingPayment({ amount, walletId, recipient, note, needType });
     setScreen('pin');
   };
 
   const handlePinComplete = () => {
     if (balanceCheckWallet) {
-      alert(`Balance for ${balanceCheckWallet}: ?${wallets[balanceCheckWallet.toLowerCase()].toLocaleString('en-IN')}`);
+      alert(`Balance for ${balanceCheckWallet}: ₹${wallets[balanceCheckWallet.toLowerCase()].toLocaleString('en-IN')}`);
       setBalanceCheckWallet(null);
       setScreen('home');
       return;
     }
 
     if (pendingPayment) {
-      const { amount, walletId } = pendingPayment;
+      const { amount, walletId, needType } = pendingPayment;
       const success = deduct(amount, walletId);
 
       if (success) {
@@ -75,7 +78,8 @@ const App = () => {
           amount,
           walletId,
           walletName: walletId.charAt(0).toUpperCase() + walletId.slice(1),
-          recipient: pendingPayment.recipient
+          recipient: pendingPayment.recipient,
+          needType
         });
         setScreen('success');
       } else {
@@ -163,6 +167,7 @@ const App = () => {
         recipient={lastPayment.recipient}
         onDone={handleDone}
         studyGroup={studyGroup}
+        needType={lastPayment.needType}
       />
     );
   }
@@ -187,105 +192,197 @@ const App = () => {
   }
 
   return (
-    <div className="app-shell animate-fade">
-      <header className="header" style={{ width: '100%', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ flex: 1, background: 'var(--surface)', borderRadius: '24px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-          <Search size={20} color="var(--text-secondary)" />
-          <span style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>Pay friends and merchants</span>
+    <div className="app-shell animate-fade" style={{ background: '#ffffff', minHeight: '100vh', color: '#1f1f1f' }}>
+      {/* GPay Header */}
+      <header style={{
+        padding: '16px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        position: 'sticky',
+        top: 0,
+        background: '#ffffff',
+        zIndex: 10,
+        boxShadow: '0 1px 0 rgba(0,0,0,0.05)'
+      }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="Pay by name or phone number"
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 44px',
+              borderRadius: '24px',
+              background: '#f1f3f4',
+              border: 'none',
+              fontSize: '14px',
+              outline: 'none',
+              color: '#1f1f1f'
+            }}
+          />
+          <Search size={18} color="#5f6368" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
         </div>
-        <div style={{ position: 'relative' }} onClick={() => toggleTheme()}>
-          <div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px' }}>
-            {user.name ? user.name.charAt(0) : 'U'}
-          </div>
-          <div style={{ position: 'absolute', bottom: -2, right: -2, width: '12px', height: '12px', background: '#34a853', borderRadius: '50%', border: '2px solid var(--bg-color)' }} />
+        <div onClick={toggleTheme} style={{ cursor: 'pointer', padding: '8px', borderRadius: '50%', background: '#f1f3f4' }}>
+          {theme === 'light' ? <Moon size={22} color="#5f6368" /> : <Sun size={22} color="#5f6368" />}
+        </div>
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          background: 'var(--primary)', color: 'white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '14px', fontWeight: 'bold'
+        }}>
+          {user.name.charAt(0)}
         </div>
       </header>
 
-      <main style={{ paddingBottom: '100px' }}>
-        <div style={{ padding: '0 20px', marginTop: '8px' }}>
-          <img
-            src="https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png"
-            alt="GPay"
-            style={{ height: '20px', opacity: 0.8 }}
-          />
+      <main style={{ padding: '24px 20px 100px' }}>
+        {/* Hero Scan Banner */}
+        <div
+          onClick={() => setScreen('scan')}
+          style={{
+            background: 'linear-gradient(135deg, #1a73e8 0%, #174ea6 100%)',
+            borderRadius: '24px',
+            padding: '24px',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 8px 16px rgba(26,115,232,0.2)',
+            cursor: 'pointer',
+            marginBottom: '32px'
+          }}
+        >
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>Scan any QR code</h3>
+            <p style={{ fontSize: '13px', opacity: 0.9 }}>Pay at any shop or merchant</p>
+          </div>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '12px',
+            background: 'rgba(255,255,255,0.2)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center'
+          }}>
+            <QrCode size={26} />
+          </div>
         </div>
 
         <BalanceDisplay balance={totalBalance} studyGroup={studyGroup} />
 
-        <div className="services-grid">
+        {/* Service Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '24px 10px',
+          marginTop: '32px',
+          marginBottom: '40px'
+        }}>
           {[
-            { label: 'Scan QR', icon: <QrCode size={22} />, action: () => setScreen('scan') },
-            { label: 'Pay contacts', icon: <User size={22} />, action: () => setScreen('pay') },
-            { label: 'Pay phone', icon: <Send size={22} />, action: () => setScreen('pay') },
-            { label: 'Bank transfer', icon: <Building2 size={22} />, action: () => setScreen('pay') }
+            { label: 'Pay contacts', icon: <User size={22} />, color: '#e8f0fe', iconColor: '#1a73e8' },
+            { label: 'Pay phone', icon: <Smartphone size={22} />, color: '#fef7e0', iconColor: '#f9ab00' },
+            { label: 'Bank transfer', icon: <Building2 size={22} />, color: '#e6f4ea', iconColor: '#1e8e3e' },
+            { label: 'Pay UPI ID', icon: <AtSign size={22} />, color: '#fce8e6', iconColor: '#d93025' },
+            { label: 'Self transfer', icon: <ArrowRightLeft size={22} />, color: '#f3e8fd', iconColor: '#9334e6' },
+            { label: 'Pay bills', icon: <Receipt size={22} />, color: '#e4f7fb', iconColor: '#12b5cb' },
+            { label: 'Mobile recharge', icon: <Zap size={22} />, color: '#fff0e0', iconColor: '#e67e22' },
+            { label: 'Rewards', icon: <CreditCard size={22} />, color: '#fce4ec', iconColor: '#d81b60' }
           ].map((item, idx) => (
-            <div key={idx} className="service-item" onClick={item.action}>
-              <div className="icon-circle">{item.icon}</div>
-              <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-main)' }}>{item.label}</span>
+            <div key={idx} onClick={() => setScreen('pay')} style={{ textAlign: 'center', cursor: 'pointer' }}>
+              <div style={{
+                width: '56px', height: '56px', margin: '0 auto 8px',
+                borderRadius: '18px', background: item.color,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: item.iconColor,
+                transition: 'transform 0.2s'
+              }} className="category-icon">
+                {item.icon}
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: '600', color: '#3c4043' }}>{item.label}</span>
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: '24px' }}>
-          <h4 style={{ padding: '0 20px', fontSize: '15px', fontWeight: '600', marginBottom: '16px' }}>People</h4>
-          <div className="people-grid">
-            {[
-              { name: 'Research', char: 'R' },
-              { name: 'Jan Study', char: 'J' },
-              { name: 'Validation', char: 'V' },
-              { name: 'Participant', char: 'P' },
-              { name: 'System', char: 'S' }
-            ].map((p, i) => (
-              <div key={i} className="person-circle" onClick={() => setScreen('pay')}>
-                <div className="avatar" style={{ width: '56px', height: '56px', background: `hsl(${i * 60}, 60%, 50%)` }}>
-                  {p.char}
-                </div>
-                <span style={{ fontSize: '12px', fontWeight: '500' }}>{p.name}</span>
+        {/* Ads Section */}
+        <div style={{ marginBottom: '40px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1f1f1f', marginBottom: '16px' }}>Offers & Rewards</h3>
+          <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+            <div style={{
+              minWidth: '280px', background: '#fef7e0', borderRadius: '24px',
+              padding: '24px', border: '1px solid #fbe4a1', position: 'relative', overflow: 'hidden'
+            }}>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#b06000', textTransform: 'uppercase', background: '#fff', padding: '2px 8px', borderRadius: '6px' }}>Featured</span>
+                <h4 style={{ fontSize: '16px', fontWeight: '700', marginTop: '12px', color: '#5f3d00' }}>Instant Loans & EMI</h4>
+                <p style={{ fontSize: '13px', color: '#855600', marginTop: '4px', opacity: 0.9 }}>Flexible repayment starting at ₹500/mo.</p>
+                <button style={{ marginTop: '16px', background: '#1a73e8', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Apply Now</button>
               </div>
-            ))}
+              <div style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.1, transform: 'rotate(-15deg)' }}>
+                <CreditCard size={100} />
+              </div>
+            </div>
+
+            <div style={{
+              minWidth: '280px', background: '#e8f0fe', borderRadius: '24px',
+              padding: '24px', border: '1px solid #c2d7fa'
+            }}>
+              <span style={{ fontSize: '10px', fontWeight: '800', color: '#174ea6', textTransform: 'uppercase', background: '#fff', padding: '2px 8px', borderRadius: '6px' }}>Offer</span>
+              <h4 style={{ fontSize: '16px', fontWeight: '700', marginTop: '12px', color: '#174ea6' }}>Flat ₹500 Rewards</h4>
+              <p style={{ fontSize: '13px', color: '#1a73e8', marginTop: '4px', opacity: 0.9 }}>On your first personal loan via UPI.</p>
+              <button style={{ marginTop: '16px', background: '#1a73e8', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Check Limit</button>
+            </div>
           </div>
         </div>
 
-        <div style={{ padding: '24px 20px' }}>
-          <h4 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '16px' }}>Manage your money</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+        {/* Management Section */}
+        <div style={{ marginBottom: '40px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1f1f1f', marginBottom: '16px' }}>Manage your money</h3>
+          <div style={{ background: '#f8f9fa', borderRadius: '24px', padding: '12px', border: '1px solid #f1f3f4' }}>
             <div
-              className="glass-card"
-              style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', cursor: 'pointer' }}
               onClick={() => setScreen('bank-accounts')}
+              style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
             >
-              <Building2 size={24} color="var(--primary)" />
-              <span style={{ fontSize: '14px', fontWeight: '600' }}>Bank accounts</span>
+              <div style={{ background: '#e8f0fe', padding: '8px', borderRadius: '12px' }}>
+                <Building2 size={20} color="#1a73e8" />
+              </div>
+              <span style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Bank accounts</span>
+              <ChevronRight size={18} color="#5f6368" />
             </div>
             <div
-              className="glass-card"
-              style={{ margin: 0, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', cursor: 'pointer' }}
               onClick={() => {
-                setBalanceCheckWallet('Savings');
+                setBalanceCheckWallet('savings');
                 setScreen('pin');
               }}
+              style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
             >
-              <ShieldCheck size={24} color="var(--primary)" />
-              <span style={{ fontSize: '14px', fontWeight: '600' }}>Check balance</span>
+              <div style={{ background: '#e6f4ea', padding: '8px', borderRadius: '12px' }}>
+                <History size={20} color="#1e8e3e" />
+              </div>
+              <span style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Check bank balance</span>
+              <ChevronRight size={18} color="#5f6368" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', cursor: 'pointer' }}>
+              <div style={{ background: '#fef7e0', padding: '8px', borderRadius: '12px' }}>
+                <History size={20} color="#f9ab00" />
+              </div>
+              <span style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>See transaction history</span>
+              <ChevronRight size={18} color="#5f6368" />
             </div>
           </div>
         </div>
       </main>
 
-      <nav className="nav-bottom">
-        <div className="nav-item active">
-          <CreditCard size={24} />
-          <span>Pay</span>
-        </div>
-        <div className="nav-item">
-          <History size={24} />
-          <span>Transactions</span>
-        </div>
-        <div className="nav-item">
-          <div className="avatar" style={{ width: '24px', height: '24px', fontSize: '10px' }}>{user.name ? user.name.charAt(0) : 'U'}</div>
-          <span>Account</span>
-        </div>
-      </nav>
+      {/* Floating Action Button */}
+      <div
+        onClick={() => setScreen('scan')}
+        style={{
+          position: 'fixed', bottom: '32px', right: '24px',
+          padding: '16px 28px', borderRadius: '32px',
+          background: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+          border: '1px solid #f1f3f4', cursor: 'pointer', zIndex: 100
+        }}
+      >
+        <QrCode size={24} color="#1a73e8" />
+        <span style={{ fontSize: '15px', fontWeight: '700', color: '#1a73e8' }}>Scan QR</span>
+      </div>
     </div>
   );
 };

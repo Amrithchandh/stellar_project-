@@ -2,24 +2,31 @@ import React, { useState } from 'react';
 import { Check, Share2, MoreVertical, ShieldCheck } from 'lucide-react';
 import { logBehavioralEvent } from '../utils/logger';
 
-const SuccessScreen = ({ amount, walletName, recipient, onDone, studyGroup }) => {
+const SuccessScreen = ({ amount, walletName, recipient, onDone, studyGroup, needType }) => {
     const [reflection, setReflection] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
 
     const handleSubmit = () => {
-        logBehavioralEvent('reflection_submit', { reflection, amount, walletName, studyGroup });
+        logBehavioralEvent('reflection_submit', { reflection, amount, walletName, studyGroup, needType });
         setIsSubmitted(true);
         setTimeout(onDone, 1500);
     };
 
     const isTest = studyGroup === 'test';
 
+    // Dynamic background based on need
+    const getBackground = () => {
+        if (needType === 'good') return '#e6f4ea';
+        if (needType === 'bad') return '#fce8e6';
+        return '#ffffff';
+    };
+
     // Counterfactual logic
     const meals = Math.floor(amount / 100);
     const coffee = Math.floor(amount / 50);
 
     return (
-        <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', height: '100%', overflowY: 'auto' }}>
+        <div className="app-shell animate-fade" style={{ background: getBackground(), height: '100%', overflowY: 'auto' }}>
             <header className="header" style={{ background: 'transparent' }}>
                 <div style={{ flex: 1 }} />
                 <div style={{ display: 'flex', gap: '16px' }}>

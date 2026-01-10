@@ -20,6 +20,10 @@
     --radius-md: 16px;
     --radius-lg: 28px;
     --font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    --good-need: #e6f4ea;
+    --bad-need: #fce8e6;
+    --good-text: #1e8e3e;
+    --bad-text: #d93025;
 }
 
 [data-theme="dark"] {

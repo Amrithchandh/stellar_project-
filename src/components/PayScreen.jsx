@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ShieldCheck, ChevronDown, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ChevronDown, CheckCircle, AtSign } from 'lucide-react';
 import WalletSelector from './WalletSelector';
 import { logBehavioralEvent } from '../utils/logger';
 
@@ -12,8 +12,7 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup }
     id: studyGroup === 'control' ? 'savings' : 'leisure',
     name: studyGroup === 'control' ? 'Default' : 'Leisure'
   });
-  const [switchCount, setSwitchCount] = useState(0);
-  const [startTime] = useState(Date.now());
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleWalletSelect = (wallet) => {
     if (studyGroup === 'control') return;
@@ -30,36 +29,65 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup }
       return;
     }
 
-    const pauseDuration = (Date.now() - startTime) / 1000;
-    logBehavioralEvent('payment_initiate', {
-      amount: Number(amount),
-      walletId: activeWallet.id,
-      recipient,
-      note,
-      pauseDuration,
-      switchCount,
-      studyGroup,
-      needType
-    });
-    onPay(Number(amount), activeWallet.id, recipient, note, needType);
+    // simulated failure
+    if (amount === '1234' || Math.random() < 0.05) {
+      onFail();
+      return;
+    }
+
+    setIsProcessing(true);
+
+    // FRICTION: Savings spending is slow
+    const delay = activeWallet.id === 'savings' ? 3500 : 1200;
+
+    setTimeout(() => {
+      const pauseDuration = (Date.now() - startTime) / 1000;
+      logBehavioralEvent('payment_initiate', {
+        amount: Number(amount),
+        walletId: activeWallet.id,
+        recipient,
+        note,
+        pauseDuration,
+        switchCount,
+        studyGroup,
+        needType
+      });
+      onPay(Number(amount), activeWallet.id, recipient, note, needType);
+      setIsProcessing(false);
+    }, delay);
   };
 
   const totalBalance = Object.values(wallets).reduce((a, b) => a + b, 0);
   const isValid = amount && Number(amount) > 0 &&
     (studyGroup === 'control' ? Number(amount) <= totalBalance : Number(amount) <= wallets[activeWallet.id]);
 
-  // Determine dynamic background
   const getBackground = () => {
-    if (needType === 'good') return '#e6f4ea'; // Soft Green
-    if (needType === 'bad') return '#fce8e6';  // Soft Red
-    return '#ffffff';
+    if (needType === 'good') return '#e6f4ea';
+    if (needType === 'bad') return '#fff8f8';
+    return 'var(--bg-color)';
   };
 
   const getThemeColor = () => {
-    if (needType === 'good') return '#1e8e3e';
+    if (needType === 'good') return 'var(--primary)';
     if (needType === 'bad') return '#d93025';
-    return '#1a73e8';
+    return 'var(--primary)';
   };
+
+  if (isProcessing) {
+    return (
+      <div className="app-shell animate-fade" style={{ background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+        <div className="spinner" style={{ borderTopColor: getThemeColor() }} />
+        <h3 style={{ marginTop: '24px', fontWeight: '800', color: getThemeColor() }}>
+          {activeWallet.id === 'savings' ? 'Validating Savings Protection...' : 'Processing...'}
+        </h3>
+        {activeWallet.id === 'savings' && (
+          <p style={{ marginTop: '12px', fontSize: '13px', color: '#5f6368', textAlign: 'center' }}>
+            Creating friction to ensure this emergency buffer spend is intentional.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell animate-fade" style={{ background: getBackground(), transition: 'background 0.5s ease' }}>
@@ -68,141 +96,81 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup }
         <div style={{ flex: 1 }} />
       </header>
 
-      {/* Need Assessment Intervention */}
       {!needType ? (
         <div style={{ padding: '40px 24px', textAlign: 'center' }} className="animate-fade">
-          <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '12px', color: '#1f1f1f' }}>Before you pay...</h2>
-          <p style={{ color: '#5f6368', fontSize: '15px', marginBottom: '32px' }}>Is this transaction for a <b>good need</b> or a <b>bad need</b>?</p>
+          <Leaf size={48} color="var(--primary)" opacity={0.2} style={{ marginBottom: '16px' }} />
+          <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px' }}>Pause & Reflect</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginBottom: '32px' }}>Is this payment essential?</p>
 
-          <div style={{ display: 'grid', gap: '16px' }}>
-            <div
-              onClick={() => setNeedType('good')}
-              style={{
-                padding: '24px', background: '#ffffff', borderRadius: '20px',
-                border: '2px solid #e6f4ea', cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-              }}
-            >
-              <h3 style={{ color: '#1e8e3e', fontSize: '18px', fontWeight: '700' }}>Good Need</h3>
-              <p style={{ fontSize: '12px', color: '#5f6368', marginTop: '4px' }}>Essential spending, savings, or investment</p>
+          <div style={{ display: 'grid', gap: '20px' }}>
+            <div onClick={() => setNeedType('good')} style={{ padding: '24px', background: 'white', borderRadius: '24px', border: '1.5px solid var(--good-need)', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
+              <h3 style={{ color: 'var(--good-text)', fontSize: '18px', fontWeight: '800' }}>Good / Necessary</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Essential for growth or living</p>
             </div>
 
-            <div
-              onClick={() => setNeedType('bad')}
-              style={{
-                padding: '24px', background: '#ffffff', borderRadius: '20px',
-                border: '2px solid #fce8e6', cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-              }}
-            >
-              <h3 style={{ color: '#d93025', fontSize: '18px', fontWeight: '700' }}>Bad Need</h3>
-              <p style={{ fontSize: '12px', color: '#5f6368', marginTop: '4px' }}>Impulse buy, unnecessary craving, or regretful spend</p>
+            <div onClick={() => setNeedType('bad')} style={{ padding: '24px', background: 'white', borderRadius: '24px', border: '1.5px solid var(--bad-need)', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
+              <h3 style={{ color: 'var(--bad-text)', fontSize: '18px', fontWeight: '800' }}>Do I really need to buy?</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Unplanned or discretionary spend</p>
             </div>
           </div>
         </div>
       ) : (
         <div className="animate-fade">
           <div style={{ padding: '10px 24px', textAlign: 'center' }}>
-            <div className="avatar" style={{
-              width: '64px', height: '64px', margin: '0 auto 12px',
-              background: '#8ab4f8', color: '#174ea6', fontSize: '24px'
-            }}>
+            <div className="avatar" style={{ width: '64px', height: '64px', margin: '0 auto 12px', background: 'white', color: 'var(--primary)', fontSize: '24px', border: '2px solid var(--border)' }}>
               {recipient.charAt(0).toUpperCase()}
             </div>
-
-            <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1f1f1f' }}>
-              Paying {recipient.split('@')[0]}
-            </h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '800' }}>Paying {recipient.split('@')[0]}</h2>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '4px' }}>
-              <p style={{ fontSize: '13px', color: '#5f6368' }}>
-                Banking Name: <b>{recipient.split('@')[0]}</b>
-              </p>
-              <CheckCircle size={14} color="#1a73e8" fill="#e8f0fe" />
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>UPI: <b>{recipient}</b></p>
+              <CheckCircle size={14} color="var(--primary)" fill="white" />
             </div>
-            <p style={{ fontSize: '12px', color: '#5f6368' }}>{recipient}</p>
 
             <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <span style={{ fontSize: '32px', fontWeight: '600', marginRight: '4px', color: '#1f1f1f' }}>₹</span>
-              <input
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                style={{
-                  border: 'none', background: 'transparent',
-                  fontSize: '56px', fontWeight: '600', width: "200px",
-                  textAlign: 'center', outline: 'none', color: '#1f1f1f'
-                }}
-                autoFocus
-              />
+              <span style={{ fontSize: '32px', fontWeight: '600', marginRight: '4px' }}>₹</span>
+              <input type="number" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '56px', fontWeight: '800', width: "220px", textAlign: 'center', outline: 'none' }} autoFocus />
             </div>
 
             <div style={{ marginTop: '16px' }}>
-              <input
-                type="text"
-                placeholder="Add a note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                style={{
-                  background: '#ffffff',
-                  border: `1.5px solid ${getThemeColor()}`,
-                  borderRadius: '20px',
-                  padding: '10px 20px',
-                  fontSize: '14px',
-                  width: '240px',
-                  textAlign: 'center',
-                  outline: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}
-              />
+              <input type="text" placeholder="Add a note" value={note} onChange={(e) => setNote(e.target.value)} style={{ background: 'white', border: `1px solid var(--border)`, borderRadius: '20px', padding: '12px 24px', fontSize: '14px', width: '260px', textAlign: 'center', outline: 'none' }} />
             </div>
           </div>
 
-          <div style={{ padding: '0 16px', marginTop: '24px', marginBottom: '40px' }}>
+          <div style={{ padding: '0 16px', marginTop: '32px', marginBottom: '40px' }}>
             {studyGroup === 'test' ? (
               <>
-                <p style={{ fontSize: '11px', fontWeight: '600', color: '#5f6368', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px', padding: '0 8px' }}>
-                  Select Funding Source
-                </p>
+                <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', padding: '0 8px' }}>Funding Source</p>
                 <WalletSelector selectedId={activeWallet.id} onSelect={handleWalletSelect} balances={wallets} />
                 <div style={{ marginTop: '24px', padding: '0 8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: '#ffffff', borderRadius: '16px', border: '1px solid #f1f3f4' }}>
-                    <ShieldCheck size={20} color="#1a73e8" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px', background: 'white', borderRadius: '24px', border: activeWallet.id === 'savings' ? '2px solid #d93025' : '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                    {activeWallet.id === 'savings' ? <AtSign size={24} color="#d93025" /> : <ShieldCheck size={24} color="var(--primary)" />}
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '14px', fontWeight: '600' }}>Paying from: {activeWallet.name} Wallet</p>
-                      <p style={{ fontSize: '12px', color: '#5f6368' }}>₹{wallets[activeWallet.id].toLocaleString('en-IN')} left today</p>
+                      <p style={{ fontSize: '15px', fontWeight: '800', color: activeWallet.id === 'savings' ? '#d93025' : 'var(--text-main)' }}>
+                        {activeWallet.id === 'savings' ? '⚠️ Using Emergency Buffer' : `From ${activeWallet.name} Wallet`}
+                      </p>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>₹{wallets[activeWallet.id].toLocaleString('en-IN')} available</p>
                     </div>
                   </div>
                 </div>
               </>
             ) : (
               <div style={{ padding: '0 8px', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: '#ffffff', borderRadius: '16px', border: '1px solid #f1f3f4' }}>
-                  <ShieldCheck size={20} color="#1a73e8" />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '14px', fontWeight: '600' }}>State Bank of India - 4421</p>
-                    <p style={{ fontSize: '12px', color: '#5f6368' }}>UPI Verified Account</p>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'white', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                  <ShieldCheck size={20} color="var(--primary)" />
+                  <div style={{ flex: 1 }}><p style={{ fontSize: '14px', fontWeight: '600' }}>State Bank of India - 4421</p></div>
                 </div>
               </div>
             )}
 
             <button
               className="btn-premium btn-primary"
-              style={{
-                width: '100%', marginTop: '32px', padding: '16px',
-                borderRadius: '16px', fontSize: '16px',
-                background: getThemeColor(),
-                boxShadow: `0 8px 16px ${getThemeColor()}33`
-              }}
-              disabled={!isValid}
+              style={{ width: '100%', marginTop: '36px', padding: '18px', borderRadius: '24px', fontSize: '16px', fontWeight: '800', background: getThemeColor() }}
+              disabled={!isValid || isProcessing}
               onClick={handlePay}
             >
-              {isValid ? `Pay ₹${amount}` : `Checking balance...`}
+              {isValid ? (isProcessing ? 'Wait...' : `Pay ₹${amount}`) : `Low Balance`}
             </button>
-            <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#5f6368', cursor: 'pointer' }} onClick={() => setNeedType(null)}>
-              Change need assessment
-            </p>
+            <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }} onClick={() => setNeedType(null)}>Change Choice</p>
           </div>
         </div>
       )}

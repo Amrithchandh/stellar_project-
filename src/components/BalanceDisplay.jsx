@@ -5,7 +5,7 @@ const BalanceDisplay = ({ balance, studyGroup }) => {
   // If balance is 3000, 10 bundles of 300. Spent bundles are removed.
   const BUNDLE_COUNT = 10;
   const bundleValue = balance > 0 ? 300 : 0; // Fixed value per bundle for study simplicity
-  const activeBundles = Math.floor(balance / 300);
+  const activeBundles = Math.floor(balance / 299.9);
 
   if (studyGroup === 'control') {
     return (
@@ -51,13 +51,13 @@ const BalanceDisplay = ({ balance, studyGroup }) => {
               style={{
                 height: '40px',
                 borderRadius: '8px',
-                background: i < activeBundles ? 'var(--primary-gradient)' : 'var(--border)',
+                background: i < activeBundles ? 'var(--primary)' : 'var(--border)',
                 opacity: i < activeBundles ? 1 : 0.2,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: i < activeBundles ? 'scale(1)' : 'scale(0.9)'
+                transform: i < activeBundles ? 'scale(1)' : 'scale(0.85)'
               }}
             >
               {i < activeBundles && <div style={{ width: '60%', height: '2px', background: 'rgba(255,255,255,0.3)', borderRadius: '1px' }} />}

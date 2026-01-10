@@ -219,6 +219,54 @@ const Auth = ({ onLogin }) => {
                 </div>
             )}
 
+            {/* Step 4: Set App PIN */}
+            {step === 4 && (
+                <div className="glass-card animate-fade">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                        <Lock size={20} color="var(--primary)" />
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>Set App PIN</h3>
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                        Create a 4-digit PIN to secure your payments.
+                    </p>
+
+                    <input
+                        ref={pinInputRef}
+                        type="tel"
+                        value={pin}
+                        onChange={handlePinChange}
+                        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                    />
+
+                    <div
+                        style={{ display: 'flex', justifyContent: 'center', gap: '12px', cursor: 'text' }}
+                        onClick={() => pinInputRef.current?.focus()}
+                    >
+                        {[0, 1, 2, 3].map(i => (
+                            <div key={i} style={{
+                                width: '45px', height: '50px',
+                                border: `1px solid ${pin.length === i ? 'var(--primary)' : 'var(--border)'}`,
+                                borderRadius: '8px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '20px', fontWeight: '700',
+                                color: 'var(--text-main)',
+                                background: 'var(--surface)'
+                            }}>
+                                {pin[i] ? '●' : ''}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '32px' }}>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+                            <div key={n} onClick={() => handlePinKeyClick(n.toString())} style={{ padding: '16px', background: 'var(--bg-color)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer', color: 'var(--text-main)' }}>{n}</div>
+                        ))}
+                        <div style={{ gridColumn: '2', padding: '16px', background: 'var(--bg-color)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => handlePinKeyClick('0')}>0</div>
+                        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setPin(prev => prev.slice(0, -1))}>⌫</div>
+                    </div>
+                </div>
+            )}
+
             {/* Step 5: Set User UPI ID */}
             {step === 5 && (
                 <div className="glass-card animate-fade">

@@ -64,14 +64,17 @@ const Auth = ({ onLogin }) => {
         }
     };
 
+    const [userUpiId, setUserUpiId] = useState('');
+
+    // ... (previous refs)
+
     // Step 4: App PIN
     const handlePinChange = (e) => {
         const val = e.target.value.replace(/\D/g, '').slice(0, 4);
         setPin(val);
         if (val.length === 4) {
             setTimeout(() => {
-                logBehavioralEvent('auth_complete');
-                onLogin({ name: 'Study Participant', email: mobile + '@upi', photo: null });
+                setStep(5);
             }, 300);
         }
     };
@@ -82,11 +85,24 @@ const Auth = ({ onLogin }) => {
             setPin(newPin);
             if (newPin.length === 4) {
                 setTimeout(() => {
-                    logBehavioralEvent('auth_complete');
-                    onLogin({ name: 'Study Participant', email: mobile + '@upi', photo: null });
+                    setStep(5);
                 }, 300);
             }
         }
+    };
+
+    const handleUpiSubmit = () => {
+        if (!userUpiId.includes('@')) {
+            setError('Please enter a valid UPI ID (e.g. name@okaxis)');
+            return;
+        }
+        logBehavioralEvent('auth_complete', { upiId: userUpiId });
+        onLogin({
+            name: userUpiId.split('@')[0],
+            email: mobile + '@upi',
+            upiId: userUpiId,
+            photo: null
+        });
     };
 
     return (
@@ -203,43 +219,35 @@ const Auth = ({ onLogin }) => {
                 </div>
             )}
 
-            {/* Step 4: Set App PIN */}
-            {step === 4 && (
-                <div style={{ textAlign: 'center', marginTop: '20px' }} className="animate-fade">
-                    <Lock size={32} color="var(--primary)" style={{ marginBottom: '16px' }} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>Unlock Google Pay</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '32px' }}>
-                        Enter Google PIN
+            {/* Step 5: Set User UPI ID */}
+            {step === 5 && (
+                <div className="glass-card animate-fade">
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', marginBottom: '8px', display: 'block' }}>
+                        CREATE YOUR UPI ID
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px', marginTop: '16px' }}>
+                        <Smartphone size={20} color="var(--primary)" />
+                        <input
+                            type="text"
+                            placeholder="yourname@okaxis"
+                            value={userUpiId}
+                            onChange={(e) => setUserUpiId(e.target.value)}
+                            style={{
+                                border: 'none', background: 'transparent',
+                                fontSize: '18px', fontWeight: '600', flex: 1, outline: 'none',
+                                color: 'var(--text-main)'
+                            }}
+                            autoFocus
+                        />
+                    </div>
+                    {error && <p style={{ color: 'var(--error)', fontSize: '12px', marginTop: '8px' }}>{error}</p>}
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '16px' }}>
+                        This ID will be used for all your simulated transactions.
                     </p>
 
-                    <input
-                        ref={pinInputRef}
-                        type="tel"
-                        value={pin}
-                        onChange={handlePinChange}
-                        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
-                    />
-
-                    <div
-                        style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px', cursor: 'text' }}
-                        onClick={() => pinInputRef.current?.focus()}
-                    >
-                        {[0, 1, 2, 3].map(i => (
-                            <div key={i} style={{
-                                width: '16px', height: '16px', borderRadius: '50%',
-                                border: '1px solid var(--text-secondary)',
-                                background: pin.length > i ? 'var(--text-main)' : 'transparent'
-                            }} />
-                        ))}
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', maxWidth: '300px', margin: '0 auto' }}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                            <div key={n} onClick={() => handlePinKeyClick(n)} className="pin-key" style={{ color: 'var(--text-main)' }}>{n}</div>
-                        ))}
-                        <div style={{ gridColumn: '2', color: 'var(--text-main)' }} className="pin-key" onClick={() => handlePinKeyClick(0)}>0</div>
-                        <div className="pin-key" onClick={() => setPin(prev => prev.slice(0, -1))} style={{ color: 'var(--text-main)' }}>⌫</div>
-                    </div>
+                    <button className="btn-premium btn-primary" style={{ marginTop: '32px', width: '100%' }} onClick={handleUpiSubmit}>
+                        Start Using UPI <ArrowRight size={18} />
+                    </button>
                 </div>
             )}
 

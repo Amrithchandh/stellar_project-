@@ -179,9 +179,9 @@ const App = () => {
   return (
     <div className="app-shell animate-fade">
       <header className="header" style={{ width: '100%', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ flex: 1, background: 'var(--surface)', borderRadius: '24px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-          <Search size={20} color="var(--text-secondary)" />
-          <span style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>Pay friends and merchants</span>
+        <div style={{ flex: 1, background: 'var(--surface)', borderRadius: '24px', padding: '10px 16px', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '700' }}>YOUR UPI ID</span>
+          <span style={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: '600' }}>{user.upiId}</span>
         </div>
         <div style={{ position: 'relative' }} onClick={() => toggleTheme()}>
           <div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px' }}>

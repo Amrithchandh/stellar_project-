@@ -64,8 +64,8 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup, 
     (studyGroup === 'control' ? Number(amount) <= totalBalance : Number(amount) <= wallets[activeWallet.id]);
 
   const getBackground = () => {
-    if (needType === 'good') return '#e6f4ea';
-    if (needType === 'bad') return '#fff8f8';
+    if (needType === 'good') return '#f0fff4'; // Soft Green Relief
+    if (needType === 'bad') return '#fff5f5';  // Soft Red Caution
     return 'var(--bg-color)';
   };
 

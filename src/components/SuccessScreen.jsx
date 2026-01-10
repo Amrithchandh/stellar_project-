@@ -16,9 +16,9 @@ const SuccessScreen = ({ amount, walletName, recipient, onDone, studyGroup, need
 
     // Dynamic background based on need
     const getBackground = () => {
-        if (needType === 'good') return '#e6f4ea';
-        if (needType === 'bad') return '#fce8e6';
-        return '#ffffff';
+        if (needType === 'good') return '#f0fff4';
+        if (needType === 'bad') return '#fff5f5';
+        return 'var(--bg-color)';
     };
 
     // Counterfactual logic

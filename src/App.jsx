@@ -11,7 +11,7 @@ import { useBalance } from './hooks/useBalance';
 import { logBehavioralEvent } from './utils/logger';
 import {
   Plus, Search, QrCode, User, Send, Building2, ChevronRight, History,
-  Settings, Moon, Sun, Smartphone, AtSign, ArrowRightLeft, Receipt, Zap, CreditCard, Leaf
+  Settings, Moon, Sun, Smartphone, AtSign, ArrowRightLeft, Receipt, Zap, CreditCard, Leaf, ShieldCheck
 } from 'lucide-react';
 
 const App = () => {
@@ -25,6 +25,8 @@ const App = () => {
     return saved ? JSON.parse(saved) : [];
   });
   const [balanceCheckWallet, setBalanceCheckWallet] = useState(null);
+  const [screen, setScreen] = useState('home');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
     localStorage.setItem('study_group', studyGroup);

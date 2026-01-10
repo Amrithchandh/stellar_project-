@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ShieldCheck, ChevronDown, CheckCircle, AtSign } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ChevronDown, CheckCircle, AtSign, Leaf } from 'lucide-react';
 import WalletSelector from './WalletSelector';
 import { logBehavioralEvent } from '../utils/logger';
 
-const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup }) => {
+const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup, onFail }) => {
   const [recipient, setRecipient] = useState(initialRecipient || 'research.participant@okaxis');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -12,6 +12,8 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '', studyGroup }
     id: studyGroup === 'control' ? 'savings' : 'leisure',
     name: studyGroup === 'control' ? 'Default' : 'Leisure'
   });
+  const [switchCount, setSwitchCount] = useState(0);
+  const [startTime] = useState(Date.now());
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleWalletSelect = (wallet) => {

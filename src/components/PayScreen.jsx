@@ -8,6 +8,7 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '' }) => {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState(''); // New Payment Note
   const [activeWallet, setActiveWallet] = useState({ id: 'leisure', name: 'Leisure' });
+  const [isFrictionLoading, setIsFrictionLoading] = useState(false);
   const [switchCount, setSwitchCount] = useState(0);
   const [startTime] = useState(Date.now());
 
@@ -27,18 +28,49 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '' }) => {
     }
 
     const pauseDuration = (Date.now() - startTime) / 1000;
-    logBehavioralEvent('payment_initiate', {
-      amount: Number(amount),
-      walletId: activeWallet.id,
-      recipient,
-      note, // Log the note!
-      pauseDuration,
-      switchCount
-    });
-    onPay(Number(amount), activeWallet.id, recipient, note);
+
+    // Friction Logic for Savings
+    if (activeWallet.id === 'savings') {
+      setIsFrictionLoading(true);
+      setTimeout(() => {
+        setIsFrictionLoading(false);
+        logBehavioralEvent('payment_initiate', {
+          amount: Number(amount),
+          walletId: activeWallet.id,
+          recipient,
+          note,
+          pauseDuration,
+          switchCount,
+          frictionApplied: true
+        });
+        onPay(Number(amount), activeWallet.id, recipient, note);
+      }, 2500); // 2.5s artificial friction delay
+    } else {
+      logBehavioralEvent('payment_initiate', {
+        amount: Number(amount),
+        walletId: activeWallet.id,
+        recipient,
+        note,
+        pauseDuration,
+        switchCount
+      });
+      onPay(Number(amount), activeWallet.id, recipient, note);
+    }
   };
 
   const isValid = amount && Number(amount) > 0 && Number(amount) <= wallets[activeWallet.id];
+
+  if (isFrictionLoading) {
+    return (
+      <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
+        <div className="friction-spinner" />
+        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-main)', marginTop: '32px' }}>Slow is okay...</h2>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '12px' }}>
+          Checking your **Savings** permissions. <br /> Creating space for you to think.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)' }}>
@@ -131,7 +163,7 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '' }) => {
             <ShieldCheck size={20} color="#1a73e8" />
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: '14px', fontWeight: '600' }}>Paying from {activeWallet.name} Wallet</p>
-              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Balance: ?{wallets[activeWallet.id].toLocaleString('en-IN')}</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Balance: ₹{wallets[activeWallet.id].toLocaleString('en-IN')}</p>
             </div>
             <ChevronDown size={20} color="var(--text-secondary)" />
           </div>
@@ -143,7 +175,7 @@ const PayScreen = ({ wallets, onPay, onBack, initialRecipient = '' }) => {
           disabled={!isValid}
           onClick={handlePay}
         >
-          {isValid ? `Pay ?${amount}` : `Checking availability...`}
+          {isValid ? `Pay ₹${amount}` : `Checking availability...`}
         </button>
 
         <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.8 }}>

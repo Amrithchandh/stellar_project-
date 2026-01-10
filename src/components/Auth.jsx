@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, ShieldCheck, Lock, Smartphone, MessageSquare } from 'lucide-react';
 import { logBehavioralEvent } from '../utils/logger';
+import logo from '../logo.svg';
 
 const Auth = ({ onLogin }) => {
     const [step, setStep] = useState(1); // 1: Mobile, 2: Sim Verify, 3: OTP, 4: App PIN
@@ -43,8 +44,8 @@ const Auth = ({ onLogin }) => {
     }, [step]);
 
     // Step 3: OTP
-    const handleOtpSubmit = () => {
-        if (otp !== '1234') {
+    const handleOtpSubmit = (val = otp) => {
+        if (val !== '1234') {
             setError('Incorrect OTP. Try 1234.');
             return;
         }
@@ -56,6 +57,11 @@ const Auth = ({ onLogin }) => {
     const handleOtpChange = (e) => {
         const val = e.target.value.replace(/\D/g, '').slice(0, 4);
         setOtp(val);
+        if (val.length === 4) {
+            setTimeout(() => {
+                handleOtpSubmit(val);
+            }, 300);
+        }
     };
 
     // Step 4: App PIN
@@ -94,7 +100,7 @@ const Auth = ({ onLogin }) => {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                 }}>
-                    <img src="/nudge-/logo.svg" alt="Logo" style={{ width: '40px' }} onError={(e) => e.target.style.display = 'none'} />
+                    <img src={logo} alt="Logo" style={{ width: '40px' }} onError={(e) => e.target.style.display = 'none'} />
                     {!error && <ShieldCheck size={32} color="var(--primary)" />}
                 </div>
                 <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-main)' }}>

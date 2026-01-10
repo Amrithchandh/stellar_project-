@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Delete, X, AlertCircle } from 'lucide-react';
-import { logBehavioralEvent } from '../utils/logger';
+import { ArrowLeft, Check, Delete, X } from 'lucide-react';
 
 const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
-  const [step, setStep] = useState('intent'); // 'intent' or 'pin'
   const [pin, setPin] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(false);
-  const [isFrictionLoading, setIsFrictionLoading] = useState(false);
   const ORIGINAL_PIN = '123456';
-
-  const [selectedIntent, setSelectedIntent] = useState(null);
 
   const handleKeyPress = (num) => {
     if (pin.length < 6) {
@@ -24,80 +19,19 @@ const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
     setError(false);
   };
 
-  const handleIntentSelect = (type) => {
-    logBehavioralEvent('payment_intent_selected', { type, amount, recipient });
-    setSelectedIntent(type);
-    setIsFrictionLoading(true);
-    setTimeout(() => {
-      setIsFrictionLoading(false);
-      setStep('pin');
-    }, 1500); // Artificial friction delay
-  };
-
   const handleSubmit = () => {
     if (pin.length < 6) return;
 
     if (pin === ORIGINAL_PIN) {
       setIsProcessing(true);
       setTimeout(() => {
-        onComplete(selectedIntent);
+        onComplete();
       }, 2500);
     } else {
       setError(true);
       setPin('');
     }
   };
-
-  if (isFrictionLoading) {
-    return (
-      <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
-        <div className="friction-spinner" />
-        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-main)', marginTop: '32px' }}>Slow is okay...</h2>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '12px' }}>Checking intentions. Building reflection space.</p>
-      </div>
-    );
-  }
-
-  if (step === 'intent') {
-    return (
-      <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', display: 'flex', flexDirection: 'column', padding: '24px' }}>
-        <header className="header" style={{ padding: '0', marginBottom: '40px' }}>
-          <ArrowLeft onClick={onBack} cursor="pointer" size={24} color="var(--text-main)" />
-        </header>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <div style={{ background: 'rgba(26, 115, 232, 0.1)', padding: '20px', borderRadius: '50%', marginBottom: '24px' }}>
-            <AlertCircle size={48} color="var(--primary)" />
-          </div>
-
-          <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px' }}>
-            Do you really want to pay?
-          </h2>
-
-          <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.5', marginBottom: '40px' }}>
-            Take a moment to think. Is this payment for something <b>good</b> and necessary, or is it a <b>wasteful</b> impulsive spend?
-          </p>
-
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <button
-              onClick={() => handleIntentSelect('good')}
-              className="btn-premium"
-              style={{ background: 'var(--success)', color: 'white', padding: '24px', fontSize: '18px', borderRadius: '20px', width: '100%' }}
-            >
-              Good / Necessary
-            </button>
-            <button
-              onClick={() => handleIntentSelect('waste')}
-              className="btn-premium"
-              style={{ background: 'var(--error)', color: 'white', padding: '24px', fontSize: '18px', borderRadius: '20px', width: '100%' }}
-            >
-              Do I really need to buy?
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (isProcessing) {
     return (
@@ -117,7 +51,7 @@ const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
   return (
     <div className="app-shell animate-fade" style={{ background: '#1c1c1c', color: '#fff' }}>
       <header className="header" style={{ background: 'transparent' }}>
-        <ArrowLeft onClick={() => setStep('intent')} cursor="pointer" color="#fff" />
+        <ArrowLeft onClick={onBack} cursor="pointer" color="#fff" />
         <div style={{ flex: 1, textAlign: 'center' }}>
           <h3 style={{ fontSize: '14px', fontWeight: '500', letterSpacing: '1px' }}>ENTER 6-DIGIT UPI PIN</h3>
         </div>
@@ -132,7 +66,7 @@ const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
           </div>
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Amount</p>
-            <p style={{ fontSize: '18px', fontWeight: '700' }}>₹{amount.toLocaleString('en-IN')}</p>
+            <p style={{ fontSize: '18px', fontWeight: '700' }}>?{amount.toLocaleString('en-IN')}</p>
           </div>
         </div>
 

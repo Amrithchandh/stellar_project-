@@ -1,84 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Check, Share2, MoreVertical, ShieldCheck, PieChart, Info, X } from 'lucide-react';
-import { logBehavioralEvent, getBehavioralLogs } from '../utils/logger';
+import React, { useState } from 'react';
+import { Check, Share2, MoreVertical, ShieldCheck } from 'lucide-react';
+import { logBehavioralEvent } from '../utils/logger';
 
-const SuccessScreen = ({ amount, walletName, recipient, isFailure, intent, onDone }) => {
+const SuccessScreen = ({ amount, walletName, recipient, onDone, studyGroup }) => {
     const [reflection, setReflection] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [stats, setStats] = useState({ leisure: 40, savings: 30, goals: 20, bills: 10 });
-
-    const isWaste = intent === 'waste';
-    const themeColor = isFailure ? 'var(--error)' : (isWaste ? '#bc4749' : 'var(--success)');
-    const bgColor = isFailure ? 'rgba(188, 71, 73, 0.05)' : (isWaste ? '#fff5f5' : 'rgba(45, 106, 79, 0.05)');
-
-    useEffect(() => {
-        if (isFailure) return;
-        const logs = getBehavioralLogs();
-        const payments = logs.filter(l => l.event === 'payment_initiate' || l.event === 'reflection_submit');
-        if (payments.length > 0) {
-            const totals = payments.reduce((acc, curr) => {
-                const w = (curr.walletId || curr.walletName || '').toLowerCase();
-                if (w) acc[w] = (acc[w] || 0) + (curr.amount || 0);
-                return acc;
-            }, {});
-            const total = Object.values(totals).reduce((a, b) => a + b, 0);
-            if (total > 0) {
-                setStats({
-                    leisure: (totals.leisure || 0) / total * 100,
-                    savings: (totals.savings || 0) / total * 100,
-                    goals: (totals.goals || 0) / total * 100,
-                    bills: (totals.bills || totals.bills_and_emi || 0) / total * 100
-                });
-            }
-        }
-    }, [isFailure]);
 
     const handleSubmit = () => {
-        if (!reflection.trim() && !isFailure) return;
-        logBehavioralEvent(isFailure ? 'failure_dismissed' : 'reflection_submit', { reflection, amount, walletName, intent });
+        logBehavioralEvent('reflection_submit', { reflection, amount, walletName, studyGroup });
         setIsSubmitted(true);
         setTimeout(onDone, 1500);
     };
 
-    const renderPieChart = () => {
-        const size = 120;
-        const radius = 50;
-        const center = size / 2;
-        let currentAngle = 0;
+    const isTest = studyGroup === 'test';
 
-        const data = [
-            { label: 'Leisure', color: '#2d6a4f', val: stats.leisure },
-            { label: 'Savings', color: '#74c69d', val: stats.savings },
-            { label: 'Goals', color: '#f9ab00', val: stats.goals },
-            { label: 'Bills', color: '#bc4749', val: stats.bills }
-        ].filter(d => d.val > 0);
-
-        return (
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                {data.map((slice, i) => {
-                    const angle = (slice.val / 100) * 360;
-                    const x1 = center + radius * Math.cos((currentAngle * Math.PI) / 180);
-                    const y1 = center + radius * Math.sin((currentAngle * Math.PI) / 180);
-                    currentAngle += angle;
-                    const x2 = center + radius * Math.cos((currentAngle * Math.PI) / 180);
-                    const y2 = center + radius * Math.sin((currentAngle * Math.PI) / 180);
-                    const largeArc = angle > 180 ? 1 : 0;
-
-                    return (
-                        <path
-                            key={i}
-                            d={`M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                            fill={slice.color}
-                        />
-                    );
-                })}
-                <circle cx={center} cy={center} r={radius * 0.6} fill="white" />
-            </svg>
-        );
-    };
+    // Counterfactual logic
+    const meals = Math.floor(amount / 100);
+    const coffee = Math.floor(amount / 50);
 
     return (
-        <div className="app-shell animate-fade" style={{ background: isWaste ? '#fffafa' : 'var(--surface)', height: '100%', overflowY: 'auto', paddingBottom: '40px' }}>
+        <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', height: '100%', overflowY: 'auto' }}>
             <header className="header" style={{ background: 'transparent' }}>
                 <div style={{ flex: 1 }} />
                 <div style={{ display: 'flex', gap: '16px' }}>
@@ -87,99 +28,79 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, intent, onDon
                 </div>
             </header>
 
-            <div style={{ textAlign: 'center', padding: '0 24px' }}>
+            <div style={{ textAlign: 'center', padding: '20px 24px 100px' }}>
                 <div style={{
-                    width: '100px',
-                    height: '100px',
+                    width: '72px',
+                    height: '72px',
                     borderRadius: '50%',
-                    background: themeColor,
+                    background: '#34a853',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
-                    margin: '0 auto 24px',
-                    boxShadow: `0 8px 16px ${isFailure || isWaste ? 'rgba(188, 71, 73, 0.2)' : 'rgba(45, 106, 79, 0.2)'}`
-                }} className={isFailure ? 'animate-fade' : 'success-icon'}>
-                    {isFailure ? <X size={48} strokeWidth={4} /> : <Check size={48} strokeWidth={4} />}
+                    margin: '0 auto 20px',
+                    boxShadow: '0 8px 24px rgba(52, 168, 83, 0.3)'
+                }} className="success-icon">
+                    <Check size={40} strokeWidth={4} />
                 </div>
 
-                <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-main)' }}>₹{amount.toLocaleString('en-IN')}</h1>
-                <p style={{ color: themeColor, fontWeight: '700', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    {isFailure ? 'Payment Failed' : 'Payment Successful'}
-                    {!isFailure && <ShieldCheck size={20} fill={themeColor} color="white" />}
+                <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '4px' }}>₹{amount.toLocaleString('en-IN')}</h1>
+                <p style={{ color: '#2e7d32', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    Payment Successful
+                    <ShieldCheck size={16} fill="#2e7d32" color="white" />
                 </p>
 
-                {isFailure ? (
-                    <div style={{ marginTop: '24px', padding: '20px', background: bgColor, borderRadius: '20px', border: '1px solid var(--error)' }}>
-                        <p style={{ fontSize: '14px', color: 'var(--error)', fontWeight: '600' }}>
-                            Something went wrong. <br /> This might be a sign to rethink this spend.
-                        </p>
-                        <button
-                            className="btn-premium btn-primary"
-                            style={{ background: 'var(--error)', width: '100%', marginTop: '20px' }}
-                            onClick={() => onDone()}
-                        >
-                            Back to Home
-                        </button>
-                    </div>
-                ) : isWaste ? (
-                    <div style={{ marginTop: '24px', padding: '20px', background: '#fff5f5', borderRadius: '20px', border: '1px solid #bc4749' }}>
-                        <p style={{ fontSize: '14px', color: '#bc4749', fontWeight: '600' }}>
-                            You marked this as impulsive. <br /> Do you really need this purchase?
-                        </p>
-                    </div>
-                ) : (
-                    <div style={{ marginTop: '24px', padding: '20px', background: 'rgba(45, 106, 79, 0.05)', borderRadius: '20px', border: '1px solid var(--success)' }}>
-                        <p style={{ fontSize: '14px', color: 'var(--success)', fontWeight: '600' }}>
-                            Good choice! <br /> This was for a necessary purpose.
-                        </p>
-                    </div>
-                )}
+                <div style={{ marginTop: '24px', padding: '16px', background: 'var(--surface)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '500' }}>
+                        To {recipient}
+                    </p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        {new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                </div>
 
-                {(!isFailure) && (
-                    <div style={{ marginTop: '24px', padding: '20px', background: 'var(--bg-color)', borderRadius: '20px', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                            <PieChart size={18} color="var(--primary)" />
-                            <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Monthly Spending Loss</h4>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            <div>{renderPieChart()}</div>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {[
-                                    { label: 'Leisure', color: '#2d6a4f' },
-                                    { label: 'Savings', color: '#74c69d' },
-                                    { label: 'Goals', color: '#f9ab00' },
-                                    { label: 'Bills', color: '#bc4749' }
-                                ].map(item => (
-                                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }} />
-                                        <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>{item.label}</span>
-                                    </div>
+                {isTest && !isSubmitted && (
+                    <div className="animate-fade" style={{ marginTop: '24px', textAlign: 'left' }}>
+                        {/* Micro-spending Snapshot */}
+                        <div style={{ background: 'rgba(26, 115, 232, 0.05)', padding: '16px', borderRadius: '16px', border: '1.5px solid var(--primary)', marginBottom: '16px' }}>
+                            <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: 'var(--primary)' }}>
+                                RESOURCES REMOVED
+                            </h4>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {Array.from({ length: Math.ceil(amount / 300) }).map((_, i) => (
+                                    <div key={i} style={{ width: '20px', height: '20px', background: 'var(--primary)', borderRadius: '4px', opacity: 0.6 }} />
                                 ))}
                             </div>
-                        </div>
-
-                        <div style={{ marginTop: '16px', background: 'var(--surface)', padding: '12px', borderRadius: '12px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid var(--border)' }}>
-                            <Info size={16} color="var(--primary)" />
-                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'left', lineHeight: '1.4' }}>
-                                <b>Counterfactual:</b> With this ₹{amount}, you could have saved towards your buffer or a meal.
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                You just depleted {Math.ceil(amount / 300)} energy bundles from your <b>{walletName}</b> wallet.
                             </p>
                         </div>
-                    </div>
-                )}
 
-                {!isSubmitted ? (
-                    <div style={{ marginTop: '24px', textAlign: 'left' }}>
-                        <div style={{ background: isWaste ? '#fff5f5' : '#f0fff4', padding: '20px', borderRadius: '16px', border: `1px solid ${isWaste ? '#fc8181' : '#68d391'}` }}>
-                            <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: isWaste ? '#9b2c2c' : '#22543d' }}>
-                                One Final Step
+                        {/* Counterfactual Comparison */}
+                        <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+                            <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: 'var(--text-main)' }}>
+                                SACRIFICE SCALE
                             </h4>
-                            <p style={{ fontSize: '13px', color: isWaste ? '#c53030' : '#276749', marginBottom: '16px' }}>
-                                Why did you choose the <b>{walletName}</b> wallet? Was this a "Good Spend" or a "Loss"?
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                This ₹{amount} could have been roughly:
+                                <ul style={{ marginTop: '6px', marginLeft: '20px', listStyleType: 'disc' }}>
+                                    {meals > 0 && <li><b>{meals}</b> regular meal{meals > 1 ? 's' : ''}</li>}
+                                    {coffee > 0 && <li><b>{coffee}</b> cup{coffee > 1 ? 's' : ''} of coffee</li>}
+                                    {amount < 50 && <li>Small daily essentials</li>}
+                                </ul>
+                            </p>
+                        </div>
+
+                        {/* Verbal Realization */}
+                        <div style={{ background: '#fefce8', padding: '16px', borderRadius: '16px', border: '1px solid #fde047' }}>
+                            <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: '#854d0e' }}>
+                                REFLECTION
+                            </h4>
+                            <p style={{ fontSize: '12px', color: '#854d0e', marginBottom: '12px', opacity: 0.8 }}>
+                                How does seeing this depletion change your perception of this payment?
                             </p>
                             <textarea
-                                placeholder="Explain your choice to finish..."
+                                placeholder="Type your realization here..."
                                 value={reflection}
                                 onChange={(e) => setReflection(e.target.value)}
                                 style={{
@@ -187,36 +108,30 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, intent, onDon
                                     height: '80px',
                                     borderRadius: '12px',
                                     padding: '12px',
-                                    border: `1px solid ${isWaste ? '#fc8181' : '#68d391'}`,
+                                    border: '1px solid #fef08a',
                                     background: 'white',
                                     fontSize: '14px',
                                     outline: 'none',
-                                    resize: 'none',
-                                    fontFamily: 'inherit'
+                                    resize: 'none'
                                 }}
                             />
                         </div>
-                        <button
-                            className="btn-premium btn-primary"
-                            style={{
-                                width: '100%',
-                                marginTop: '16px',
-                                borderRadius: '12px',
-                                opacity: reflection.trim() ? 1 : 0.5,
-                                cursor: reflection.trim() ? 'pointer' : 'not-allowed',
-                                background: themeColor
-                            }}
-                            disabled={!reflection.trim()}
-                            onClick={handleSubmit}
-                        >
-                            Complete Payment & Finish
-                        </button>
-                    </div>
-                ) : (
-                    <div className="animate-fade" style={{ marginTop: '24px', padding: '20px', background: isWaste ? 'rgba(188, 71, 73, 0.1)' : 'rgba(45, 106, 79, 0.1)', borderRadius: '16px', color: themeColor, fontWeight: '600' }}>
-                        Great! Redirecting to home...
                     </div>
                 )}
+
+                <button
+                    className="btn-premium btn-primary"
+                    style={{ width: '100%', marginTop: '32px', borderRadius: '12px', padding: '16px' }}
+                    onClick={handleSubmit}
+                >
+                    {isSubmitted ? "Recorded" : "Finish"}
+                </button>
+            </div>
+
+            <div style={{ position: 'absolute', bottom: '40px', width: '100%', textAlign: 'center' }}>
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    POWERED BY UPI
+                </p>
             </div>
         </div>
     );

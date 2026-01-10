@@ -26,21 +26,21 @@ const App = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  const handlePaymentComplete = (amount, walletId, recipient, note) => {
+  const handlePaymentComplete = (amount, walletId, recipient, note, intent) => {
     // 10% Failure Probability for simulation
     const isFailure = Math.random() < 0.1;
 
     if (isFailure) {
-      logBehavioralEvent('payment_failed', { amount, walletId, recipient });
-      setPaymentDetails({ amount, walletId, recipient, note, isFailure: true });
+      logBehavioralEvent('payment_failed', { amount, walletId, recipient, intent });
+      setPaymentDetails({ amount, walletId, recipient, note, intent, isFailure: true });
       setScreen('success');
       return;
     }
 
     const success = deduct(amount, walletId);
     if (success) {
-      logBehavioralEvent('payment_success', { amount, walletId, recipient });
-      setPaymentDetails({ amount, walletId, recipient, note, isFailure: false });
+      logBehavioralEvent('payment_success', { amount, walletId, recipient, intent });
+      setPaymentDetails({ amount, walletId, recipient, note, intent, isFailure: false });
       setScreen('success');
     } else {
       alert('Insufficient funds!');
@@ -76,7 +76,7 @@ const App = () => {
           <PinScreen
             amount={paymentDetails.amount}
             recipient={paymentDetails.recipient}
-            onComplete={() => handlePaymentComplete(paymentDetails.amount, paymentDetails.walletId, paymentDetails.recipient, paymentDetails.note)}
+            onComplete={(intent) => handlePaymentComplete(paymentDetails.amount, paymentDetails.walletId, paymentDetails.recipient, paymentDetails.note, intent)}
             onBack={() => setScreen('pay')}
           />
         );
@@ -87,6 +87,7 @@ const App = () => {
             walletName={paymentDetails.walletId}
             recipient={paymentDetails.recipient}
             isFailure={paymentDetails.isFailure}
+            intent={paymentDetails.intent}
             onDone={() => { setScreen('home'); setScannedRecipient(''); }}
           />
         );

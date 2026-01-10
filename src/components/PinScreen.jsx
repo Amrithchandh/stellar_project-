@@ -10,6 +10,8 @@ const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
   const [isFrictionLoading, setIsFrictionLoading] = useState(false);
   const ORIGINAL_PIN = '123456';
 
+  const [selectedIntent, setSelectedIntent] = useState(null);
+
   const handleKeyPress = (num) => {
     if (pin.length < 6) {
       setPin(prev => prev + num);
@@ -24,6 +26,7 @@ const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
 
   const handleIntentSelect = (type) => {
     logBehavioralEvent('payment_intent_selected', { type, amount, recipient });
+    setSelectedIntent(type);
     setIsFrictionLoading(true);
     setTimeout(() => {
       setIsFrictionLoading(false);
@@ -37,7 +40,7 @@ const PinScreen = ({ amount, recipient, onComplete, onBack }) => {
     if (pin === ORIGINAL_PIN) {
       setIsProcessing(true);
       setTimeout(() => {
-        onComplete();
+        onComplete(selectedIntent);
       }, 2500);
     } else {
       setError(true);

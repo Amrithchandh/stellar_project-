@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Share2, MoreVertical, ShieldCheck, PieChart, Info } from 'lucide-react';
+import { Check, Share2, MoreVertical, ShieldCheck, PieChart, Info, X } from 'lucide-react';
 import { logBehavioralEvent, getBehavioralLogs } from '../utils/logger';
 
-const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => {
+const SuccessScreen = ({ amount, walletName, recipient, isFailure, intent, onDone }) => {
     const [reflection, setReflection] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [stats, setStats] = useState({ leisure: 40, savings: 30, goals: 20, bills: 10 });
 
+    const isWaste = intent === 'waste';
+    const themeColor = isFailure ? 'var(--error)' : (isWaste ? '#bc4749' : 'var(--success)');
+    const bgColor = isFailure ? 'rgba(188, 71, 73, 0.05)' : (isWaste ? '#fff5f5' : 'rgba(45, 106, 79, 0.05)');
+
     useEffect(() => {
         if (isFailure) return;
-        // Calculate real stats from logs if possible, else use dummies for demo
         const logs = getBehavioralLogs();
         const payments = logs.filter(l => l.event === 'payment_initiate' || l.event === 'reflection_submit');
         if (payments.length > 0) {
@@ -32,15 +35,50 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
 
     const handleSubmit = () => {
         if (!reflection.trim() && !isFailure) return;
-        logBehavioralEvent(isFailure ? 'failure_dismissed' : 'reflection_submit', { reflection, amount, walletName });
+        logBehavioralEvent(isFailure ? 'failure_dismissed' : 'reflection_submit', { reflection, amount, walletName, intent });
         setIsSubmitted(true);
         setTimeout(onDone, 1500);
     };
 
-    // ... (renderPieChart remains same but we conditionalize it in return)
+    const renderPieChart = () => {
+        const size = 120;
+        const radius = 50;
+        const center = size / 2;
+        let currentAngle = 0;
+
+        const data = [
+            { label: 'Leisure', color: '#2d6a4f', val: stats.leisure },
+            { label: 'Savings', color: '#74c69d', val: stats.savings },
+            { label: 'Goals', color: '#f9ab00', val: stats.goals },
+            { label: 'Bills', color: '#bc4749', val: stats.bills }
+        ].filter(d => d.val > 0);
+
+        return (
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                {data.map((slice, i) => {
+                    const angle = (slice.val / 100) * 360;
+                    const x1 = center + radius * Math.cos((currentAngle * Math.PI) / 180);
+                    const y1 = center + radius * Math.sin((currentAngle * Math.PI) / 180);
+                    currentAngle += angle;
+                    const x2 = center + radius * Math.cos((currentAngle * Math.PI) / 180);
+                    const y2 = center + radius * Math.sin((currentAngle * Math.PI) / 180);
+                    const largeArc = angle > 180 ? 1 : 0;
+
+                    return (
+                        <path
+                            key={i}
+                            d={`M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                            fill={slice.color}
+                        />
+                    );
+                })}
+                <circle cx={center} cy={center} r={radius * 0.6} fill="white" />
+            </svg>
+        );
+    };
 
     return (
-        <div className="app-shell animate-fade" style={{ background: 'var(--surface)', height: '100%', overflowY: 'auto', paddingBottom: '40px' }}>
+        <div className="app-shell animate-fade" style={{ background: isWaste ? '#fffafa' : 'var(--surface)', height: '100%', overflowY: 'auto', paddingBottom: '40px' }}>
             <header className="header" style={{ background: 'transparent' }}>
                 <div style={{ flex: 1 }} />
                 <div style={{ display: 'flex', gap: '16px' }}>
@@ -54,25 +92,25 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
                     width: '100px',
                     height: '100px',
                     borderRadius: '50%',
-                    background: isFailure ? 'var(--error)' : 'var(--success)',
+                    background: themeColor,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
                     margin: '0 auto 24px',
-                    boxShadow: `0 8px 16px ${isFailure ? 'rgba(188, 71, 73, 0.2)' : 'rgba(45, 106, 79, 0.2)'}`
+                    boxShadow: `0 8px 16px ${isFailure || isWaste ? 'rgba(188, 71, 73, 0.2)' : 'rgba(45, 106, 79, 0.2)'}`
                 }} className={isFailure ? 'animate-fade' : 'success-icon'}>
                     {isFailure ? <X size={48} strokeWidth={4} /> : <Check size={48} strokeWidth={4} />}
                 </div>
 
                 <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-main)' }}>₹{amount.toLocaleString('en-IN')}</h1>
-                <p style={{ color: isFailure ? 'var(--error)' : 'var(--success)', fontWeight: '700', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <p style={{ color: themeColor, fontWeight: '700', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     {isFailure ? 'Payment Failed' : 'Payment Successful'}
-                    {!isFailure && <ShieldCheck size={20} fill="var(--success)" color="white" />}
+                    {!isFailure && <ShieldCheck size={20} fill={themeColor} color="white" />}
                 </p>
 
-                {isFailure && (
-                    <div style={{ marginTop: '24px', padding: '20px', background: 'rgba(188, 71, 73, 0.05)', borderRadius: '20px', border: '1px solid var(--error)' }}>
+                {isFailure ? (
+                    <div style={{ marginTop: '24px', padding: '20px', background: bgColor, borderRadius: '20px', border: '1px solid var(--error)' }}>
                         <p style={{ fontSize: '14px', color: 'var(--error)', fontWeight: '600' }}>
                             Something went wrong. <br /> This might be a sign to rethink this spend.
                         </p>
@@ -83,6 +121,18 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
                         >
                             Back to Home
                         </button>
+                    </div>
+                ) : isWaste ? (
+                    <div style={{ marginTop: '24px', padding: '20px', background: '#fff5f5', borderRadius: '20px', border: '1px solid #bc4749' }}>
+                        <p style={{ fontSize: '14px', color: '#bc4749', fontWeight: '600' }}>
+                            You marked this as impulsive. <br /> Do you really need this purchase?
+                        </p>
+                    </div>
+                ) : (
+                    <div style={{ marginTop: '24px', padding: '20px', background: 'rgba(45, 106, 79, 0.05)', borderRadius: '20px', border: '1px solid var(--success)' }}>
+                        <p style={{ fontSize: '14px', color: 'var(--success)', fontWeight: '600' }}>
+                            Good choice! <br /> This was for a necessary purpose.
+                        </p>
                     </div>
                 )}
 
@@ -121,11 +171,11 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
 
                 {!isSubmitted ? (
                     <div style={{ marginTop: '24px', textAlign: 'left' }}>
-                        <div style={{ background: '#fffbeb', padding: '20px', borderRadius: '16px', border: '1px solid #fde68a' }}>
-                            <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: '#92400e' }}>
+                        <div style={{ background: isWaste ? '#fff5f5' : '#f0fff4', padding: '20px', borderRadius: '16px', border: `1px solid ${isWaste ? '#fc8181' : '#68d391'}` }}>
+                            <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: isWaste ? '#9b2c2c' : '#22543d' }}>
                                 One Final Step
                             </h4>
-                            <p style={{ fontSize: '13px', color: '#b45309', marginBottom: '16px' }}>
+                            <p style={{ fontSize: '13px', color: isWaste ? '#c53030' : '#276749', marginBottom: '16px' }}>
                                 Why did you choose the <b>{walletName}</b> wallet? Was this a "Good Spend" or a "Loss"?
                             </p>
                             <textarea
@@ -137,7 +187,7 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
                                     height: '80px',
                                     borderRadius: '12px',
                                     padding: '12px',
-                                    border: '1px solid #fcd34d',
+                                    border: `1px solid ${isWaste ? '#fc8181' : '#68d391'}`,
                                     background: 'white',
                                     fontSize: '14px',
                                     outline: 'none',
@@ -153,7 +203,8 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
                                 marginTop: '16px',
                                 borderRadius: '12px',
                                 opacity: reflection.trim() ? 1 : 0.5,
-                                cursor: reflection.trim() ? 'pointer' : 'not-allowed'
+                                cursor: reflection.trim() ? 'pointer' : 'not-allowed',
+                                background: themeColor
                             }}
                             disabled={!reflection.trim()}
                             onClick={handleSubmit}
@@ -162,7 +213,7 @@ const SuccessScreen = ({ amount, walletName, recipient, isFailure, onDone }) => 
                         </button>
                     </div>
                 ) : (
-                    <div className="animate-fade" style={{ marginTop: '24px', padding: '20px', background: 'rgba(52, 168, 83, 0.1)', borderRadius: '16px', color: '#2e7d32', fontWeight: '600' }}>
+                    <div className="animate-fade" style={{ marginTop: '24px', padding: '20px', background: isWaste ? 'rgba(188, 71, 73, 0.1)' : 'rgba(45, 106, 79, 0.1)', borderRadius: '16px', color: themeColor, fontWeight: '600' }}>
                         Great! Redirecting to home...
                     </div>
                 )}

@@ -211,7 +211,7 @@ const App = () => {
           ].map((item, idx) => (
             <div key={idx} className="service-item" onClick={item.action}>
               <div className="icon-circle">{item.icon}</div>
-              <span style={{ fontSize: '12px', fontWeight: '500' }}>{item.label}</span>
+              <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-main)' }}>{item.label}</span>
             </div>
           ))}
         </div>

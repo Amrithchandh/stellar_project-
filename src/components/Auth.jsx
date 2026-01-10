@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, ShieldCheck, Lock, Smartphone, MessageSquare } from 'lucide-react';
 import { logBehavioralEvent } from '../utils/logger';
 
@@ -8,6 +8,9 @@ const Auth = ({ onLogin }) => {
     const [otp, setOtp] = useState('');
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
+
+    const otpInputRef = useRef(null);
+    const pinInputRef = useRef(null);
 
     // Step 1: Mobile Number
     const handleMobileSubmit = () => {
@@ -30,6 +33,15 @@ const Auth = ({ onLogin }) => {
         }
     }, [step]);
 
+    // Auto-focus hidden inputs
+    useEffect(() => {
+        if (step === 3 && otpInputRef.current) {
+            otpInputRef.current.focus();
+        } else if (step === 4 && pinInputRef.current) {
+            pinInputRef.current.focus();
+        }
+    }, [step]);
+
     // Step 3: OTP
     const handleOtpSubmit = () => {
         if (otp !== '1234') {
@@ -41,13 +53,28 @@ const Auth = ({ onLogin }) => {
         logBehavioralEvent('auth_otp_verified');
     };
 
+    const handleOtpChange = (e) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+        setOtp(val);
+    };
+
     // Step 4: App PIN
-    const handlePinSubmit = (val) => {
-        const newPin = pin + val;
-        if (newPin.length <= 4) {
+    const handlePinChange = (e) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+        setPin(val);
+        if (val.length === 4) {
+            setTimeout(() => {
+                logBehavioralEvent('auth_complete');
+                onLogin({ name: 'Study Participant', email: mobile + '@upi', photo: null });
+            }, 300);
+        }
+    };
+
+    const handlePinKeyClick = (val) => {
+        if (pin.length < 4) {
+            const newPin = pin + val;
             setPin(newPin);
             if (newPin.length === 4) {
-                // Auto-submit on 4th digit
                 setTimeout(() => {
                     logBehavioralEvent('auth_complete');
                     onLogin({ name: 'Study Participant', email: mobile + '@upi', photo: null });
@@ -85,7 +112,7 @@ const Auth = ({ onLogin }) => {
                         ENTER MOBILE NUMBER
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '18px', fontWeight: '600' }}>+91</span>
+                        <span style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>+91</span>
                         <input
                             type="tel"
                             placeholder="00000 00000"
@@ -93,7 +120,8 @@ const Auth = ({ onLogin }) => {
                             onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                             style={{
                                 border: 'none', background: 'transparent',
-                                fontSize: '18px', fontWeight: '600', flex: 1, outline: 'none'
+                                fontSize: '18px', fontWeight: '600', flex: 1, outline: 'none',
+                                color: 'var(--text-main)'
                             }}
                             autoFocus
                         />
@@ -110,7 +138,7 @@ const Auth = ({ onLogin }) => {
             {step === 2 && (
                 <div style={{ textAlign: 'center', marginTop: '40px' }} className="animate-fade">
                     <div className="shimmer" style={{ width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 24px' }}></div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Verifying Mobile Number...</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>Verifying Mobile Number...</h3>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
                         Sending secure SMS to verify +91 {mobile}
                     </p>
@@ -122,18 +150,33 @@ const Auth = ({ onLogin }) => {
                 <div className="glass-card animate-fade">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                         <MessageSquare size={20} color="var(--primary)" />
-                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Enter OTP</h3>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>Enter OTP</h3>
                     </div>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
                         Passcode sent to +91 {mobile} <br /> (Use 1234)
                     </p>
 
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                    <input
+                        ref={otpInputRef}
+                        type="tel"
+                        value={otp}
+                        onChange={handleOtpChange}
+                        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                    />
+
+                    <div
+                        style={{ display: 'flex', justifyContent: 'center', gap: '12px', cursor: 'text' }}
+                        onClick={() => otpInputRef.current?.focus()}
+                    >
                         {[0, 1, 2, 3].map(i => (
                             <div key={i} style={{
-                                width: '45px', height: '50px', border: '1px solid #ccc', borderRadius: '8px',
+                                width: '45px', height: '50px',
+                                border: `1px solid ${otp.length === i ? 'var(--primary)' : 'var(--border)'}`,
+                                borderRadius: '8px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '20px', fontWeight: '700'
+                                fontSize: '20px', fontWeight: '700',
+                                color: 'var(--text-main)',
+                                background: 'var(--surface)'
                             }}>
                                 {otp[i] || ''}
                             </div>
@@ -142,10 +185,10 @@ const Auth = ({ onLogin }) => {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '32px' }}>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                            <div key={n} onClick={() => setOtp(prev => (prev + n).slice(0, 4))} style={{ padding: '16px', background: '#f0f2f5', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer' }}>{n}</div>
+                            <div key={n} onClick={() => setOtp(prev => (prev + n).slice(0, 4))} style={{ padding: '16px', background: 'var(--bg-color)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer', color: 'var(--text-main)' }}>{n}</div>
                         ))}
-                        <div style={{ gridColumn: '2', padding: '16px', background: '#f0f2f5', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer' }} onClick={() => setOtp(prev => (prev + 0).slice(0, 4))}>0</div>
-                        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => setOtp(prev => prev.slice(0, -1))}>⌫</div>
+                        <div style={{ gridColumn: '2', padding: '16px', background: 'var(--bg-color)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setOtp(prev => (prev + 0).slice(0, 4))}>0</div>
+                        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setOtp(prev => prev.slice(0, -1))}>⌫</div>
                     </div>
 
                     <button className="btn-premium btn-primary" style={{ marginTop: '24px', width: '100%' }} onClick={handleOtpSubmit}>
@@ -158,12 +201,23 @@ const Auth = ({ onLogin }) => {
             {step === 4 && (
                 <div style={{ textAlign: 'center', marginTop: '20px' }} className="animate-fade">
                     <Lock size={32} color="var(--primary)" style={{ marginBottom: '16px' }} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>Unlock Google Pay</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>Unlock Google Pay</h3>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '32px' }}>
                         Enter Google PIN
                     </p>
 
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px' }}>
+                    <input
+                        ref={pinInputRef}
+                        type="tel"
+                        value={pin}
+                        onChange={handlePinChange}
+                        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                    />
+
+                    <div
+                        style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px', cursor: 'text' }}
+                        onClick={() => pinInputRef.current?.focus()}
+                    >
                         {[0, 1, 2, 3].map(i => (
                             <div key={i} style={{
                                 width: '16px', height: '16px', borderRadius: '50%',
@@ -175,10 +229,10 @@ const Auth = ({ onLogin }) => {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', maxWidth: '300px', margin: '0 auto' }}>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                            <div key={n} onClick={() => handlePinSubmit(n)} className="pin-key">{n}</div>
+                            <div key={n} onClick={() => handlePinKeyClick(n)} className="pin-key" style={{ color: 'var(--text-main)' }}>{n}</div>
                         ))}
-                        <div style={{ gridColumn: '2' }} className="pin-key" onClick={() => handlePinSubmit(0)}>0</div>
-                        <div className="pin-key" onClick={() => setPin(prev => prev.slice(0, -1))}>⌫</div>
+                        <div style={{ gridColumn: '2', color: 'var(--text-main)' }} className="pin-key" onClick={() => handlePinKeyClick(0)}>0</div>
+                        <div className="pin-key" onClick={() => setPin(prev => prev.slice(0, -1))} style={{ color: 'var(--text-main)' }}>⌫</div>
                     </div>
                 </div>
             )}

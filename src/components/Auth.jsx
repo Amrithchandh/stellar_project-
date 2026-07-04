@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Cpu, Landmark, User, Briefcase, Key, CheckCircle, ShieldAlert } from 'lucide-react';
 import logo from '../logo.svg';
+import { connectFreighter, isFreighterInstalled } from '../services/stellar';
 
 const Auth = ({ onLogin }) => {
   // Onboarding steps:
@@ -14,29 +15,75 @@ const Auth = ({ onLogin }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [kycData, setKycData] = useState({ name: '', idNumber: '', agreeToTax: true });
   const [walletConnected, setWalletConnected] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState(null);
 
   const handleRoleSelect = (selectedRole) => {
     setRole(selectedRole);
     setStep(2);
   };
 
-  const handleConnectWallet = () => {
+  const handleConnectWallet = async () => {
     setIsConnecting(true);
-    setTimeout(() => {
+    try {
+      if (!isFreighterInstalled()) {
+        throw new Error('Freighter extension not detected.');
+      }
+      const pubKey = await connectFreighter();
+      setConnectedAddress(pubKey);
       setWalletConnected(true);
       setIsConnecting(false);
+
       if (role === 'employer') {
-        // Employers don't need KYC for the hackathon demo, they are funding
         onLogin({
           role: 'employer',
           name: 'Global Gig Corp',
-          address: 'G-Employer-Stellar-8892',
-          kycVerified: true
+          address: pubKey,
+          kycVerified: true,
+          isRealWallet: true
         });
       } else {
         setStep(3); // Worker proceeds to KYC
       }
-    }, 1800);
+    } catch (err) {
+      console.warn('Freighter Wallet connection failed. Falling back to demo mode:', err);
+      setIsConnecting(false);
+      const useMock = window.confirm(
+        "Real Freighter wallet extension not detected or authorized.\n\nWould you like to proceed with a simulated Stellar demo account?"
+      );
+      if (useMock) {
+        const mockKey = role === 'employer' ? 'GC-Employer-Demo-Stellar-8892' : 'GC-Worker-Demo-Stellar-3129';
+        setConnectedAddress(mockKey);
+        setWalletConnected(true);
+        if (role === 'employer') {
+          onLogin({
+            role: 'employer',
+            name: 'Global Gig Corp (Demo)',
+            address: mockKey,
+            kycVerified: true,
+            isRealWallet: false
+          });
+        } else {
+          setStep(3);
+        }
+      }
+    }
+  };
+
+  const handleConnectMock = () => {
+    const mockKey = role === 'employer' ? 'GC-Employer-Demo-Stellar-8892' : 'GC-Worker-Demo-Stellar-3129';
+    setConnectedAddress(mockKey);
+    setWalletConnected(true);
+    if (role === 'employer') {
+      onLogin({
+        role: 'employer',
+        name: 'Global Gig Corp (Demo)',
+        address: mockKey,
+        kycVerified: true,
+        isRealWallet: false
+      });
+    } else {
+      setStep(3);
+    }
   };
 
   const handleKycSubmit = (e) => {
@@ -56,8 +103,9 @@ const Auth = ({ onLogin }) => {
     onLogin({
       role: 'worker',
       name: kycData.name || 'StreamSave Worker',
-      address: 'G-Worker-Stellar-3129',
-      kycVerified: true
+      address: connectedAddress || 'GC-Worker-Demo-Stellar-3129',
+      kycVerified: true,
+      isRealWallet: connectedAddress ? !connectedAddress.startsWith('GC-') : false
     });
   };
 
@@ -170,11 +218,11 @@ const Auth = ({ onLogin }) => {
                 Connect Freighter Wallet
               </button>
               <button 
-                onClick={handleConnectWallet}
+                onClick={handleConnectMock}
                 className="btn-premium"
-                style={{ width: '100%', border: '1.5px solid var(--border)', background: 'white' }}
+                style={{ width: '100%', border: '1.5px solid var(--border)', background: 'white', color: 'var(--text-secondary)' }}
               >
-                Connect xBull Wallet
+                Continue with Demo Wallet
               </button>
             </div>
           )}
@@ -264,8 +312,9 @@ const Auth = ({ onLogin }) => {
 
           <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', textAlign: 'left' }}>
             <p style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>VERIFICATION SPEC DETAILS</p>
-            <p style={{ fontSize: '12px', marginTop: '4px' }}><b>Stellar Address:</b> <code style={{ fontSize: '10px' }}>G-Worker-Stellar-3129</code></p>
+            <p style={{ fontSize: '12px', marginTop: '4px', wordBreak: 'break-all' }}><b>Stellar Address:</b> <code style={{ fontSize: '10px' }}>{connectedAddress || 'GC-Worker-Demo-Stellar-3129'}</code></p>
             <p style={{ fontSize: '12px', marginTop: '2px' }}><b>Status:</b> SECURE / COMPLIANT</p>
+            <p style={{ fontSize: '12px', marginTop: '2px' }}><b>Mode:</b> {connectedAddress && connectedAddress.startsWith('GC-') ? 'SIMULATED DEMO' : 'LIVE TESTNET'}</p>
           </div>
 
           <button 

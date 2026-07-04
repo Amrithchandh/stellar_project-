@@ -4,8 +4,10 @@ import {
   ArrowUpRight, AlertCircle, Sparkles, Send, TrendingUp 
 } from 'lucide-react';
 import { getOraclePrice } from '../hooks/useBalance';
+import { fetchXlmBalance, fundWithFriendbot } from '../services/stellar';
 
 const WorkerDashboard = ({ 
+  user,
   balanceState, 
   getLiveBalances, 
   withdraw, 
@@ -29,6 +31,37 @@ const WorkerDashboard = ({
   
   // Reflector Price tracking
   const [oraclePrice, setOraclePrice] = useState(6500);
+
+  // Stellar XLM balance tracking
+  const [xlmBalance, setXlmBalance] = useState(null);
+  const [isFunding, setIsFunding] = useState(false);
+
+  useEffect(() => {
+    if (!user || !user.address) return;
+    
+    const updateBalance = async () => {
+      const bal = await fetchXlmBalance(user.address);
+      setXlmBalance(bal);
+    };
+
+    updateBalance();
+    const interval = setInterval(updateBalance, 8000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleFundAccount = async () => {
+    if (!user || !user.address) return;
+    setIsFunding(true);
+    const success = await fundWithFriendbot(user.address);
+    if (success) {
+      alert("Success! 10,000 Testnet XLM funded via Friendbot.");
+      const bal = await fetchXlmBalance(user.address);
+      setXlmBalance(bal);
+    } else {
+      alert("Faucet failed. Stellar Friendbot may be offline. Try again later.");
+    }
+    setIsFunding(false);
+  };
 
   // Poll real-time stream data
   useEffect(() => {
@@ -147,20 +180,41 @@ const WorkerDashboard = ({
           >
             Employer App
           </button>
-          <div className="kyc-badge">
-            <ShieldCheck size={14} /> Verified
+          <div className="kyc-badge" style={{ background: user?.isRealWallet ? '#e0f2fe' : '#e8f5e9', color: user?.isRealWallet ? '#0369a1' : '#2e7d32' }}>
+            <ShieldCheck size={14} /> {user?.isRealWallet ? 'On-Chain' : 'Mock Demo'}
           </div>
         </div>
       </header>
 
+      {/* Stellar Network Status Alert if not funded */}
+      {xlmBalance === -1 && (
+        <div className="nudge-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#ffebee', borderLeftColor: '#d93025', margin: '0 0 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={20} color="#d93025" style={{ flexShrink: 0 }} />
+            <div>
+              <span style={{ fontWeight: '800', fontSize: '11px', color: '#d93025', display: 'block' }}>ACCOUNT NOT CREATED</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Account needs funding to exist on Stellar Testnet.</span>
+            </div>
+          </div>
+          <button
+            onClick={handleFundAccount}
+            disabled={isFunding}
+            className="btn-premium btn-primary"
+            style={{ padding: '6px 12px', fontSize: '10px', background: '#d93025', borderRadius: '8px' }}
+          >
+            {isFunding ? 'Funding...' : 'Claim Faucet'}
+          </button>
+        </div>
+      )}
+
       {/* Main Streaming Ticker */}
-      <div className="glass-card" style={{ margin: '0 0 20px', background: 'white', textAlign: 'center', padding: '24px' }}>
-        <h4 style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <div className="glass-card" style={{ margin: '0 0 20px', background: 'white', textAlign: 'center', padding: '20px' }}>
+        <h4 style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>
           On-Chain Wage Stream
         </h4>
         
         {balanceState.isActive ? (
-          <div className="live-ticker">
+          <div className="live-ticker" style={{ margin: '4px 0 8px' }}>
             ₹{liveData.totalAccrued.toFixed(4)}
           </div>
         ) : (
@@ -169,9 +223,38 @@ const WorkerDashboard = ({
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-          <TrendingUp size={14} color="var(--primary)" />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          <TrendingUp size={12} color="var(--primary)" />
           <span>Accruing ₹{(balanceState.streamRate * 3600).toFixed(0)}/hr continuously</span>
+        </div>
+
+        {/* On-Chain Account Details */}
+        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '12px', border: '1px solid var(--border)', textAlign: 'left' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '6px' }}>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Wallet Address:</span>
+            <span 
+              style={{ fontWeight: '700', fontFamily: 'monospace', cursor: 'pointer', color: 'var(--primary)' }}
+              title={user?.address}
+              onClick={() => {
+                navigator.clipboard.writeText(user?.address);
+                alert("Address copied to clipboard!");
+              }}
+            >
+              {user?.address ? `${user.address.slice(0, 6)}...${user.address.slice(-6)}` : 'GC...'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Stellar Balance:</span>
+            <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>
+              {xlmBalance === null ? (
+                'Loading on-chain...'
+              ) : xlmBalance === -1 ? (
+                '0.0000 XLM (Inactive)'
+              ) : (
+                `${xlmBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} XLM`
+              )}
+            </span>
+          </div>
         </div>
       </div>
 

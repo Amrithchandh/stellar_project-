@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import EmployerDashboard from './components/EmployerDashboard';
 import WorkerDashboard from './components/WorkerDashboard';
+import AIChatbot from './components/AIChatbot';
 import { useBalance } from './hooks/useBalance';
 import { ShieldCheck, Moon, Sun, Info } from 'lucide-react';
 
@@ -93,6 +94,7 @@ const App = () => {
           <Auth onLogin={handleLogin} />
         ) : user.role === 'employer' ? (
           <EmployerDashboard 
+            user={user}
             balanceState={balanceState.state}
             fundStream={balanceState.fundStream}
             resetStream={balanceState.resetStream}
@@ -101,6 +103,7 @@ const App = () => {
           />
         ) : (
           <WorkerDashboard 
+            user={user}
             balanceState={balanceState.state}
             getLiveBalances={balanceState.getLiveBalances}
             withdraw={balanceState.withdraw}
@@ -110,6 +113,9 @@ const App = () => {
           />
         )}
       </div>
+
+      {/* Global AI Explainer Chatbot Guide */}
+      <AIChatbot />
 
       {/* Compliance / Tech Specification Modal */}
       {showComplianceModal && (

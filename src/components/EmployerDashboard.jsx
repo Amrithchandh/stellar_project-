@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, LayoutGrid, DollarSign, Clock, Sliders, ArrowRight } from 'lucide-react';
 
-const EmployerDashboard = ({ balanceState, fundStream, resetStream, getLiveBalances, onSwitchRole }) => {
+const EmployerDashboard = ({ user, balanceState, fundStream, resetStream, getLiveBalances, onSwitchRole }) => {
   const [amount, setAmount] = useState('1000');
   const [rate, setRate] = useState('0.05'); // ₹0.05 per second = ₹180/hour
   const [allocations, setAllocations] = useState({
@@ -81,17 +81,19 @@ const EmployerDashboard = ({ balanceState, fundStream, resetStream, getLiveBalan
     <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', padding: '20px' }}>
       
       {/* Top Navigation / Selector */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
           <h3 style={{ fontSize: '18px', fontWeight: '800' }}>Employer Console</h3>
-          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Stellar Stream Payroll System</p>
+          <p style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+            Wallet: <span style={{ fontFamily: 'monospace', fontWeight: '700' }} title={user?.address}>{user?.address ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : 'GC...'}</span>
+          </p>
         </div>
         <button 
           onClick={onSwitchRole}
           className="btn-premium"
-          style={{ fontSize: '12px', padding: '8px 12px', background: 'var(--border)', color: 'var(--text-main)', border: 'none', borderRadius: '12px' }}
+          style={{ fontSize: '11px', padding: '6px 12px', background: 'var(--border)', color: 'var(--text-main)', border: 'none', borderRadius: '10px' }}
         >
-          Switch to Worker App
+          Worker App
         </button>
       </div>
 

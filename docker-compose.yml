@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: streamsave_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: super_secure_db_password_9921
+      POSTGRES_DB: streamsave
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: streamsave_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: streamsave_backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:super_secure_db_password_9921@postgres:5432/streamsave?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=super_secret_production_key
+      - REFRESH_SECRET=super_secret_refresh_key
+      - CLAUDE_API_KEY=your_actual_anthropic_api_key_here
+      - HORIZON_URL=https://horizon-testnet.stellar.org
+      - STELLAR_NETWORK=TESTNET
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:

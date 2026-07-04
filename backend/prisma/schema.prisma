@@ -1,0 +1,592 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  EMPLOYER
+  EMPLOYEE
+  STUDENT
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum StreamStatus {
+  ACTIVE
+  PAUSED
+  TERMINATED
+}
+
+enum LoanStatus {
+  ACTIVE
+  REPAID
+  DEFAULTED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  SOLD
+  PENDING
+}
+
+// ─── USERS & AUTH ────────────────────────────────────────────────────────────
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  phoneNumber     String?          @unique
+  passwordHash    String
+  role            Role             @default(STUDENT)
+  isEmailVerified Boolean          @default(false)
+  isPhoneVerified Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  profile              Profile?
+  student              Student?
+  employer             Employer?
+  employee             Employee?
+  sessions             Session[]
+  wallets              Wallet[]
+  notifications        Notification[]
+  activityLogs         ActivityLog[]
+  auditLogs            AuditLog[]
+  kyc                  Kyc?
+  referrals            Referral[]         @relation("Referrer")
+  referredBy           Referral?          @relation("ReferredUser", fields: [referredById], references: [id])
+  referredById         String?            @unique
+  rewards              Reward[]
+  supportTickets       SupportTicket[]
+  aiInsights           AIInsight[]
+  financialHealthScore FinancialHealthScore?
+  permissions          UserPermission[]
+  settings             UserSetting?
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  avatarUrl String?
+  bio       String?
+  updatedAt DateTime @updatedAt
+}
+
+model UserSetting {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                String   @default("dark")
+  notificationsEnabled Boolean  @default(true)
+  emailAlerts          Boolean  @default(true)
+  smsAlerts            Boolean  @default(false)
+  currency             String   @default("INR")
+  language             String   @default("en")
+  updatedAt            DateTime @updatedAt
+}
+
+model Kyc {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         KycStatus @default(PENDING)
+  documentType   String
+  documentNumber String
+  documentUrl    String
+  selfieUrl      String?
+  verifiedAt     DateTime?
+  rejectionReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// ─── PERMISSIONS ─────────────────────────────────────────────────────────────
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique  // e.g. "manage_payroll", "view_analytics"
+  description String
+  users       UserPermission[]
+}
+
+model UserPermission {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  grantedAt    DateTime   @default(now())
+
+  @@unique([userId, permissionId])
+}
+
+// ─── COMPANY & EMPLOYER ───────────────────────────────────────────────────────
+
+model Company {
+  id          String     @id @default(uuid())
+  name        String
+  taxId       String     @unique
+  industry    String?
+  website     String?
+  logoUrl     String?
+  address     String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  employers   Employer[]
+  employees   Employee[]
+  payrolls    Payroll[]
+}
+
+model Employer {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Employee {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  isApproved  Boolean  @default(false)
+  salaryRate  Float    // stroops per second (on-chain precision)
+  position    String?
+  department  String?
+  startDate   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  streams     Stream[]
+}
+
+// ─── STUDENT ─────────────────────────────────────────────────────────────────
+
+model Student {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  universityName  String
+  collegeName     String?
+  studentIdCard   String
+  degree          String?
+  yearOfStudy     Int?
+  expectedGraduation DateTime?
+  createdAt       DateTime @default(now())
+
+  grants              EducationGrant[]
+  scholarships        Scholarship[]
+  budgetPlans         BudgetPlan[]
+  loans               StudentLoan[]
+  internshipEarnings  InternshipEarning[]
+  parentContributions ParentContribution[]
+  creditProfile       StudentCreditProfile?
+  achievements        Achievement[]
+  goalChallenges      GoalChallenge[]
+}
+
+model StudentCreditProfile {
+  id            String   @id @default(uuid())
+  studentId     String   @unique
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  creditScore   Int      @default(300)
+  onTimePayments Int     @default(0)
+  latePayments  Int      @default(0)
+  totalBorrowed Float    @default(0.0)
+  totalRepaid   Float    @default(0.0)
+  updatedAt     DateTime @updatedAt
+}
+
+model FinancialHealthScore {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score           Int      @default(0)   // 0-100
+  savingsScore    Int      @default(0)
+  budgetScore     Int      @default(0)
+  debtScore       Int      @default(0)
+  diversityScore  Int      @default(0)
+  computedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model InternshipEarning {
+  id           String   @id @default(uuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  company      String
+  role         String
+  amount       Float
+  currency     String   @default("INR")
+  startDate    DateTime
+  endDate      DateTime?
+  isPaid       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model ParentContribution {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  contributor String   // "Parent", "Guardian", "Sponsor Name"
+  streamRate  Float    // stroops per second
+  isActive    Boolean  @default(true)
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+}
+
+// ─── WALLETS & VAULTS ─────────────────────────────────────────────────────────
+
+model Wallet {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicKey      String        @unique
+  walletName     String        @default("Primary Wallet")
+  isVerified     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  vaults         Vault[]
+  transactions   Transaction[]
+}
+
+model Vault {
+  id             String   @id @default(uuid())
+  walletId       String
+  wallet         Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  name           String   // Spending, Savings, Goals, Bills | Daily, Education, Emergency, Career
+  label          String?  // User-defined custom label
+  allocationPct  Int      // Percentage (0-100) of incoming stream
+  balance        Float    @default(0.0)
+  lastUpdatedAt  DateTime @default(now())
+
+  goals          Goal[]
+  bills          Bill[]
+  subscriptions  Subscription[]
+}
+
+model Goal {
+  id                 String   @id @default(uuid())
+  vaultId            String
+  vault              Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  name               String
+  description        String?
+  targetAmount       Float
+  currentAccumulated Float    @default(0.0)
+  targetAsset        String   // e.g. "XLM", "USDC", "Gold", "INR"
+  targetAssetAmount  Float    @default(0.0)
+  targetDate         DateTime?
+  isCompleted        Boolean  @default(false)
+  createdAt          DateTime @default(now())
+}
+
+model Bill {
+  id         String   @id @default(uuid())
+  vaultId    String
+  vault      Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  provider   String
+  category   String?  // Rent, Electricity, Internet, Phone
+  amountDue  Float
+  dueDate    DateTime
+  isPaid     Boolean  @default(false)
+  paidAt     DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model Subscription {
+  id            String   @id @default(uuid())
+  vaultId       String
+  vault         Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  serviceName   String
+  amount        Float
+  billingCycle  String   // MONTHLY, QUARTERLY, ANNUAL
+  nextBillingAt DateTime
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model Investment {
+  id            String           @id @default(uuid())
+  userId        String
+  assetCode     String           // XLM, USDC, Gold, etc.
+  assetIssuer   String?
+  units         Float
+  buyPrice      Float
+  currentPrice  Float            @default(0.0)
+  totalInvested Float
+  currentValue  Float            @default(0.0)
+  status        InvestmentStatus @default(ACTIVE)
+  purchasedAt   DateTime         @default(now())
+  soldAt        DateTime?
+  createdAt     DateTime         @default(now())
+}
+
+// ─── PAYROLL & STREAMS ────────────────────────────────────────────────────────
+
+model Payroll {
+  id              String   @id @default(uuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String   @default("Monthly Payroll")
+  totalBudget     Float
+  fundedAmount    Float    @default(0.0)
+  fundingTxHash   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  streams         Stream[]
+}
+
+model Stream {
+  id              String       @id @default(uuid())
+  payrollId       String
+  payroll         Payroll      @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  contractId      String?      // Soroban contract ID for this stream
+  status          StreamStatus @default(ACTIVE)
+  startedAt       DateTime     @default(now())
+  pausedAt        DateTime?
+  resumedAt       DateTime?
+  terminatedAt    DateTime?
+  totalPausedMs   BigInt       @default(0)  // Milliseconds of accumulated pause time
+}
+
+// ─── EDUCATION FINANCE ───────────────────────────────────────────────────────
+
+model EducationGrant {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  provider   String
+  type       String   @default("INCOME") // INCOME, GRANT, FREELANCE
+  amount     Float
+  currency   String   @default("INR")
+  receivedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+model Scholarship {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name        String
+  provider    String
+  description String?
+  streamRate  Float    // stroops per second
+  isActive    Boolean  @default(true)
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  contractId  String?  // Soroban contract ID for scholarship stream
+}
+
+model ScholarshipAlert {
+  id           String   @id @default(uuid())
+  studentId    String
+  title        String
+  provider     String
+  amount       Float
+  deadline     DateTime
+  applyUrl     String?
+  isApplied    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model StudentLoan {
+  id         String     @id @default(uuid())
+  studentId  String
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lender     String
+  loanType   String     @default("EDUCATION") // EDUCATION, PERSONAL, EMERGENCY
+  principal  Float
+  interestRate Float    @default(0.0)
+  repaid     Float      @default(0.0)
+  emiAmount  Float      @default(0.0)
+  nextEmiDate DateTime?
+  status     LoanStatus @default(ACTIVE)
+  disbursedAt DateTime  @default(now())
+  createdAt  DateTime   @default(now())
+}
+
+model BudgetPlan {
+  id              String   @id @default(uuid())
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  month           Int      // 1-12
+  year            Int
+  monthlyBudget   Float
+  spendingLimit   Float
+  allocatedSaving Float
+  actualSpending  Float    @default(0.0)
+  actualSaving    Float    @default(0.0)
+  createdAt       DateTime @default(now())
+}
+
+// ─── GAMIFICATION ─────────────────────────────────────────────────────────────
+
+model Achievement {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badgeType   String   // FIRST_SAVE, GOAL_REACHED, STREAK_7, BUDGET_MASTER etc.
+  title       String
+  description String
+  earnedAt    DateTime @default(now())
+}
+
+model GoalChallenge {
+  id            String   @id @default(uuid())
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title         String
+  description   String
+  targetAmount  Float
+  currentAmount Float    @default(0.0)
+  durationDays  Int
+  startedAt     DateTime @default(now())
+  endsAt        DateTime
+  isCompleted   Boolean  @default(false)
+}
+
+// ─── TRANSACTIONS ─────────────────────────────────────────────────────────────
+
+model Transaction {
+  id              String   @id @default(uuid())
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type            String   // WITHDRAWAL, DEPOSIT, DCA_CONVERSION, REPAYMENT, STREAM_CREDIT, VAULT_SPLIT
+  amount          Float
+  asset           String   @default("XLM")
+  assetAmount     Float?
+  txHash          String?  @unique
+  memo            String?
+  status          String   @default("CONFIRMED") // PENDING, CONFIRMED, FAILED
+  fromAddress     String?
+  toAddress       String?
+  feeAmount       Float?
+  timestamp       DateTime @default(now())
+}
+
+// ─── AI & INSIGHTS ────────────────────────────────────────────────────────────
+
+model AIInsight {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String   @default("GENERAL") // SAVINGS, BUDGET, CAREER, SCHOLARSHIP, SPENDING
+  insight   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  type      String   @default("INFO") // INFO, ALERT, SUCCESS, WARNING
+  isRead    Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+}
+
+// ─── REFERRAL & REWARDS ───────────────────────────────────────────────────────
+
+model Referral {
+  id           String   @id @default(uuid())
+  referrerId   String
+  referrer     User     @relation("Referrer", fields: [referrerId], references: [id])
+  referredUser User?    @relation("ReferredUser")
+  code         String   @unique
+  isUsed       Boolean  @default(false)
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+}
+
+model Reward {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    String
+  type      String   @default("BONUS") // REFERRAL, SAVINGS_MILESTONE, STREAK, BONUS
+  createdAt DateTime @default(now())
+}
+
+// ─── SUPPORT ─────────────────────────────────────────────────────────────────
+
+model SupportTicket {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject    String
+  message    String
+  category   String       @default("GENERAL") // PAYMENT, WALLET, KYC, GENERAL
+  status     TicketStatus @default(OPEN)
+  adminNotes String?
+  resolvedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+// ─── AUDIT & ACTIVITY ────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  table     String
+  recordId  String
+  operation String   @default("UPDATE") // CREATE, UPDATE, DELETE
+  oldValue  Json?
+  newValue  Json?
+  createdAt DateTime @default(now())
+}

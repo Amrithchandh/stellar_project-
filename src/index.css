@@ -337,4 +337,104 @@ body {
     }
 }
 
-/* Force Update */
+/* StreamSave Custom CSS */
+.wallet-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 8px;
+}
+
+.wallet-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-sm);
+}
+
+.wallet-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.wallet-card.active {
+    border: 2px solid var(--primary);
+    background: rgba(45, 106, 79, 0.03);
+}
+
+.wallet-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.spending-wallet .wallet-icon { background: #d8f3dc; color: #2d6a4f; }
+.savings-wallet .wallet-icon { background: #dcf2f1; color: #1a73e8; }
+.goals-wallet .wallet-icon { background: #fff3b0; color: #e09f3e; }
+.bills-wallet .wallet-icon { background: #fce8e6; color: #d93025; }
+
+.live-ticker {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--primary);
+    font-family: monospace;
+    letter-spacing: -1px;
+    margin: 8px 0;
+    text-shadow: 0 2px 4px rgba(45, 106, 79, 0.1);
+}
+
+.nudge-card {
+    background: #f0f7f4;
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13px;
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+}
+
+.kyc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.allocation-slider {
+    width: 100%;
+    accent-color: var(--primary);
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    outline: none;
+}

@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #2d6a4f;
+  --primary-rgb: 45, 106, 79;
+}
+
+[data-theme="dark"] {
+  --bg-color: #0f172a;
+  --surface: #1e293b;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Live Ticker monospace font */
+.ticker-font {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

@@ -1,272 +1,284 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ShieldCheck, Lock, Smartphone, MessageSquare } from 'lucide-react';
-import { logBehavioralEvent } from '../utils/logger';
+import React, { useState } from 'react';
+import { ShieldCheck, Cpu, Landmark, User, Briefcase, Key, CheckCircle, ShieldAlert } from 'lucide-react';
 import logo from '../logo.svg';
 
-const Auth = ({ onLogin, studyGroup, onToggleGroup }) => {
-    const [step, setStep] = useState(1); // 1: Mobile, 2: Sim Verify, 3: OTP, 4: App PIN
-    const [mobile, setMobile] = useState('');
-    const [otp, setOtp] = useState('');
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState('');
+const Auth = ({ onLogin }) => {
+  // Onboarding steps:
+  // 1: Role Selection (Employer vs Worker)
+  // 2: Connect Wallet (Freighter/xBull Mock)
+  // 3: KYC Verification (Worker only)
+  // 4: Onboarding Complete
+  const [step, setStep] = useState(1);
+  const [role, setRole] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [kycData, setKycData] = useState({ name: '', idNumber: '', agreeToTax: true });
+  const [walletConnected, setWalletConnected] = useState(false);
 
-    const otpInputRef = useRef(null);
-    const pinInputRef = useRef(null);
+  const handleRoleSelect = (selectedRole) => {
+    setRole(selectedRole);
+    setStep(2);
+  };
 
-    // Step 1: Mobile Number
-    const handleMobileSubmit = () => {
-        if (mobile.length !== 10) {
-            setError('Please enter a valid 10-digit number');
-            return;
-        }
-        setError('');
-        setStep(2);
-        logBehavioralEvent('auth_mobile_entered', { mobile });
-    };
+  const handleConnectWallet = () => {
+    setIsConnecting(true);
+    setTimeout(() => {
+      setWalletConnected(true);
+      setIsConnecting(false);
+      if (role === 'employer') {
+        // Employers don't need KYC for the hackathon demo, they are funding
+        onLogin({
+          role: 'employer',
+          name: 'Global Gig Corp',
+          address: 'G-Employer-Stellar-8892',
+          kycVerified: true
+        });
+      } else {
+        setStep(3); // Worker proceeds to KYC
+      }
+    }, 1800);
+  };
 
-    // Step 2: Simulate SIM Verification
-    useEffect(() => {
-        if (step === 2) {
-            const timer = setTimeout(() => {
-                setStep(3);
-            }, 2500); // 2.5s simulated delay
-            return () => clearTimeout(timer);
-        }
-    }, [step]);
+  const handleKycSubmit = (e) => {
+    e.preventDefault();
+    if (!kycData.name || !kycData.idNumber) {
+      alert("Please fill in all KYC details");
+      return;
+    }
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifying(false);
+      setStep(4);
+    }, 2500);
+  };
 
-    // Auto-focus hidden inputs
-    useEffect(() => {
-        if (step === 3 && otpInputRef.current) {
-            otpInputRef.current.focus();
-        } else if (step === 4 && pinInputRef.current) {
-            pinInputRef.current.focus();
-        }
-    }, [step]);
+  const handleFinishWorker = () => {
+    onLogin({
+      role: 'worker',
+      name: kycData.name || 'StreamSave Worker',
+      address: 'G-Worker-Stellar-3129',
+      kycVerified: true
+    });
+  };
 
-    // Step 3: OTP
-    const handleOtpSubmit = (val = otp) => {
-        if (val !== '1234') {
-            setError('Incorrect OTP. Try 1234.');
-            return;
-        }
-        setError('');
-        setStep(4);
-        logBehavioralEvent('auth_otp_verified');
-    };
-
-    const handleOtpChange = (e) => {
-        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-        setOtp(val);
-        if (val.length === 4) {
-            setTimeout(() => {
-                handleOtpSubmit(val);
-            }, 300);
-        }
-    };
-
-    // Step 4: App PIN
-    const handlePinChange = (e) => {
-        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-        setPin(val);
-        if (val.length === 4) {
-            setTimeout(() => {
-                logBehavioralEvent('auth_complete');
-                onLogin({ name: 'Study Participant', email: mobile + '@upi', photo: null });
-            }, 300);
-        }
-    };
-
-    const handlePinKeyClick = (val) => {
-        if (pin.length < 4) {
-            const newPin = pin + val;
-            setPin(newPin);
-            if (newPin.length === 4) {
-                setTimeout(() => {
-                    logBehavioralEvent('auth_complete');
-                    onLogin({ name: 'Study Participant', email: mobile + '@upi', photo: null });
-                }, 300);
-            }
-        }
-    };
-
-    return (
-        <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', padding: '24px' }}>
-
-            {/* Header / Logo Area */}
-            <div style={{ marginTop: '40px', marginBottom: '40px', textAlign: 'center' }}>
-                <div style={{
-                    width: '64px', height: '64px', margin: '0 auto 16px',
-                    background: 'white', borderRadius: '12px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}>
-                    <img src={logo} alt="Logo" style={{ width: '40px' }} onError={(e) => e.target.style.display = 'none'} />
-                    {!error && <ShieldCheck size={32} color="var(--primary)" />}
-                </div>
-                <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-main)' }}>
-                    Welcome to UPI
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                    India's Payment Super App
-                </p>
-            </div>
-
-            {/* Step 1: Mobile Number */}
-            {step === 1 && (
-                <div className="glass-card animate-fade">
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', marginBottom: '8px', display: 'block' }}>
-                        ENTER MOBILE NUMBER
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>+91</span>
-                        <input
-                            type="tel"
-                            placeholder="00000 00000"
-                            value={mobile}
-                            onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                            style={{
-                                border: 'none', background: 'transparent',
-                                fontSize: '18px', fontWeight: '600', flex: 1, outline: 'none',
-                                color: 'var(--text-main)'
-                            }}
-                            autoFocus
-                        />
-                    </div>
-                    {error && <p style={{ color: 'var(--error)', fontSize: '12px', marginTop: '8px' }}>{error}</p>}
-
-                    <button className="btn-premium btn-primary" style={{ marginTop: '24px', width: '100%' }} onClick={handleMobileSubmit}>
-                        Continue <ArrowRight size={18} />
-                    </button>
-                </div>
-            )}
-
-            {/* Step 2: SIM Verification Animation */}
-            {step === 2 && (
-                <div style={{ textAlign: 'center', marginTop: '40px' }} className="animate-fade">
-                    <div className="shimmer" style={{ width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 24px' }}></div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>Verifying Mobile Number...</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-                        Sending secure SMS to verify +91 {mobile}
-                    </p>
-                </div>
-            )}
-
-            {/* Step 3: Enter OTP */}
-            {step === 3 && (
-                <div className="glass-card animate-fade">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                        <MessageSquare size={20} color="var(--primary)" />
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>Enter OTP</h3>
-                    </div>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-                        Passcode sent to +91 {mobile} <br /> (Use 1234)
-                    </p>
-
-                    <input
-                        ref={otpInputRef}
-                        type="tel"
-                        value={otp}
-                        onChange={handleOtpChange}
-                        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
-                    />
-
-                    <div
-                        style={{ display: 'flex', justifyContent: 'center', gap: '12px', cursor: 'text' }}
-                        onClick={() => otpInputRef.current?.focus()}
-                    >
-                        {[0, 1, 2, 3].map(i => (
-                            <div key={i} style={{
-                                width: '45px', height: '50px',
-                                border: `1px solid ${otp.length === i ? 'var(--primary)' : 'var(--border)'}`,
-                                borderRadius: '8px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '20px', fontWeight: '700',
-                                color: 'var(--text-main)',
-                                background: 'var(--surface)'
-                            }}>
-                                {otp[i] || ''}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '32px' }}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                            <div key={n} onClick={() => setOtp(prev => (prev + n).slice(0, 4))} style={{ padding: '16px', background: 'var(--bg-color)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer', color: 'var(--text-main)' }}>{n}</div>
-                        ))}
-                        <div style={{ gridColumn: '2', padding: '16px', background: 'var(--bg-color)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center', fontWeight: '600', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setOtp(prev => (prev + 0).slice(0, 4))}>0</div>
-                        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setOtp(prev => prev.slice(0, -1))}>⌫</div>
-                    </div>
-
-                    <button className="btn-premium btn-primary" style={{ marginTop: '24px', width: '100%' }} onClick={handleOtpSubmit}>
-                        Verify OTP
-                    </button>
-                </div>
-            )}
-
-            {/* Step 4: Set App PIN */}
-            {step === 4 && (
-                <div style={{ textAlign: 'center', marginTop: '20px' }} className="animate-fade">
-                    <Lock size={32} color="var(--primary)" style={{ marginBottom: '16px' }} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>Unlock Google Pay</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '32px' }}>
-                        Enter Google PIN
-                    </p>
-
-                    <input
-                        ref={pinInputRef}
-                        type="tel"
-                        value={pin}
-                        onChange={handlePinChange}
-                        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
-                    />
-
-                    <div
-                        style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px', cursor: 'text' }}
-                        onClick={() => pinInputRef.current?.focus()}
-                    >
-                        {[0, 1, 2, 3].map(i => (
-                            <div key={i} style={{
-                                width: '16px', height: '16px', borderRadius: '50%',
-                                border: '1px solid var(--text-secondary)',
-                                background: pin.length > i ? 'var(--text-main)' : 'transparent'
-                            }} />
-                        ))}
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', maxWidth: '300px', margin: '0 auto' }}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                            <div key={n} onClick={() => handlePinKeyClick(n)} className="pin-key" style={{ color: 'var(--text-main)' }}>{n}</div>
-                        ))}
-                        <div style={{ gridColumn: '2', color: 'var(--text-main)' }} className="pin-key" onClick={() => handlePinKeyClick(0)}>0</div>
-                        <div className="pin-key" onClick={() => setPin(prev => prev.slice(0, -1))} style={{ color: 'var(--text-main)' }}>⌫</div>
-                    </div>
-                </div>
-            )}
-
-            <div style={{ marginTop: 'auto', paddingBottom: '10px', textAlign: 'center' }}>
-                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                    Your payments are 100% secure with UPI
-                </p>
-                <div
-                    onClick={onToggleGroup}
-                    style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        background: 'var(--border)',
-                        fontSize: '10px',
-                        fontWeight: '700',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        textTransform: 'uppercase'
-                    }}
-                >
-                    Research Group: {studyGroup}
-                </div>
-            </div>
-
+  return (
+    <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', padding: '24px', justifyContent: 'center' }}>
+      
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{
+          width: '64px', height: '64px', margin: '0 auto 16px',
+          background: 'white', borderRadius: '18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(45,106,79,0.15)',
+          border: '1.5px solid var(--border)'
+        }}>
+          <ShieldCheck size={36} color="var(--primary)" />
         </div>
-    );
+        <h2 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-0.5px' }}>
+          StreamSave
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500', marginTop: '4px' }}>
+          Earn. Stream. Save. Own.
+        </p>
+      </div>
+
+      {/* Step 1: Role Selection */}
+      {step === 1 && (
+        <div className="glass-card animate-fade" style={{ margin: 0 }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px', textAlign: 'center' }}>
+            Select your role to onboard
+          </h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div 
+              onClick={() => handleRoleSelect('worker')}
+              style={{
+                padding: '20px',
+                border: '2px solid var(--border)',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                background: 'white'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#d8f3dc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+                <User size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: '800', fontSize: '15px' }}>I am a Worker</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Receive real-time streamed wages and auto-save</p>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => handleRoleSelect('employer')}
+              style={{
+                padding: '20px',
+                border: '2px solid var(--border)',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                background: 'white'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#dcf2f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a73e8' }}>
+                <Briefcase size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: '800', fontSize: '15px' }}>I am an Employer</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Setup wage streams and fund workforce payroll</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Connect Stellar Wallet */}
+      {step === 2 && (
+        <div className="glass-card animate-fade" style={{ margin: 0, textAlign: 'center' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(26,115,232,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#1a73e8' }}>
+            <Key size={28} />
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>Connect Stellar Wallet</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+            StreamSave runs on-chain. Connect Freighter or xBull wallet browser extension to sign transactions.
+          </p>
+
+          {isConnecting ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '16px' }}>
+              <div className="spinner" style={{ borderTopColor: '#1a73e8' }} />
+              <p style={{ fontSize: '13px', fontWeight: '600', color: '#1a73e8' }}>Connecting wallet signature client...</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                onClick={handleConnectWallet}
+                className="btn-premium btn-primary"
+                style={{ width: '100%', background: '#1a73e8' }}
+              >
+                Connect Freighter Wallet
+              </button>
+              <button 
+                onClick={handleConnectWallet}
+                className="btn-premium"
+                style={{ width: '100%', border: '1.5px solid var(--border)', background: 'white' }}
+              >
+                Connect xBull Wallet
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 3: KYC Verification (Regulatory Hook) */}
+      {step === 3 && (
+        <div className="glass-card animate-fade" style={{ margin: 0 }}>
+          {isVerifying ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div className="spinner" style={{ margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>Verifying Identity</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Cross-checking credentials with FIU-IND and tax registries. Please wait...
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleKycSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Landmark size={20} color="var(--primary)" />
+                <h3 style={{ fontSize: '16px', fontWeight: '800' }}>Compliance KYC Hook</h3>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                To comply with India regulatory standards (30% crypto tax & 1% TDS), please link your identity document.
+              </p>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>FULL LEGAL NAME</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Amrit Raj"
+                  value={kycData.name}
+                  onChange={(e) => setKycData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1.5px solid var(--border)', outline: 'none', fontSize: '14px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>AADHAAR / PAN CARD NUMBER</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. 5567 XXXX XXXX"
+                  value={kycData.idNumber}
+                  onChange={(e) => setKycData(prev => ({ ...prev, idNumber: e.target.value }))}
+                  required
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1.5px solid var(--border)', outline: 'none', fontSize: '14px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '8px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={kycData.agreeToTax}
+                  onChange={(e) => setKycData(prev => ({ ...prev, agreeToTax: e.target.checked }))}
+                  id="taxAgreement"
+                  style={{ marginTop: '2px' }}
+                />
+                <label htmlFor="taxAgreement" style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  I acknowledge the 30% flat tax on gains and 1% TDS applies to on-chain digital asset conversions under RBI/FIU-IND guidelines.
+                </label>
+              </div>
+
+              <button 
+                type="submit"
+                className="btn-premium btn-primary"
+                style={{ width: '100%', marginTop: '12px' }}
+              >
+                Submit Verification
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {/* Step 4: Verification Complete */}
+      {step === 4 && (
+        <div className="glass-card animate-fade" style={{ margin: 0, textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#e8f5e9', color: '#2e7d32', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <CheckCircle size={36} />
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#2e7d32', marginBottom: '8px' }}>Identity Verified</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Your on-chain profile has been successfully generated. StreamSave protocol compliance is active.
+          </p>
+
+          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', textAlign: 'left' }}>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>VERIFICATION SPEC DETAILS</p>
+            <p style={{ fontSize: '12px', marginTop: '4px' }}><b>Stellar Address:</b> <code style={{ fontSize: '10px' }}>G-Worker-Stellar-3129</code></p>
+            <p style={{ fontSize: '12px', marginTop: '2px' }}><b>Status:</b> SECURE / COMPLIANT</p>
+          </div>
+
+          <button 
+            onClick={handleFinishWorker}
+            className="btn-premium btn-primary"
+            style={{ width: '100%' }}
+          >
+            Enter Worker Dashboard
+          </button>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Auth;

@@ -131,7 +131,7 @@ const WorkerDashboard = ({
   const projectedGold = monthlySavingsAccrual / oraclePrice;
 
   return (
-    <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', minHeight: '100vh', padding: '20px 20px 100px' }}>
+    <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', padding: '20px 20px 100px' }}>
       
       {/* Top Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

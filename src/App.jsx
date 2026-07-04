@@ -49,7 +49,7 @@ const App = () => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'rgba(255, 255, 255, 0.8)',
+        background: 'var(--surface-glass)',
         backdropFilter: 'blur(8px)',
         borderBottom: '1px solid var(--border)',
         zIndex: 100

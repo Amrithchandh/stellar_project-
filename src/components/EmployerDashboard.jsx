@@ -78,7 +78,7 @@ const EmployerDashboard = ({ balanceState, fundStream, resetStream, getLiveBalan
   };
 
   return (
-    <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', minHeight: '100vh', padding: '20px' }}>
+    <div className="app-shell animate-fade" style={{ background: 'var(--bg-color)', padding: '20px' }}>
       
       {/* Top Navigation / Selector */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>

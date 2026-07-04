@@ -1,7 +1,6 @@
 import { useBalance } from './useBalance';
 
 // Wrapper hook for StreamVault contract interaction
-pub_hook()
 export const useStream = () => {
   const { state, fundStream, withdraw, updateAllocations, getLiveBalances } = useBalance();
 
@@ -17,5 +16,3 @@ export const useStream = () => {
     getLiveBalances
   };
 };
-
-function pub_hook() {}
